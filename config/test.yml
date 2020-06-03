@@ -1,0 +1,5 @@
+processor1:
+  ageRestriction: 28
+
+processor2:
+  ageRestriction: 31

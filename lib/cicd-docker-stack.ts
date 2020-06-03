@@ -3,13 +3,13 @@ import codebuild = require('@aws-cdk/aws-codebuild');
 import codepipeline = require('@aws-cdk/aws-codepipeline');
 import codepipeline_actions = require('@aws-cdk/aws-codepipeline-actions');
 import ecr = require('@aws-cdk/aws-ecr');
+import ecs = require('@aws-cdk/aws-ecs');
 import s3 = require('@aws-cdk/aws-s3');
 
 interface CicdDockerStackProps extends cdk.StackProps {
     repository: string;
     owner: string;
     branch?: string;
-    // artifactBucket: string;
     artifactBucket: s3.IBucket;
 }
 
@@ -53,7 +53,6 @@ export class CicdDockerStack extends cdk.Stack {
         const sourceOutput = new codepipeline.Artifact();
 
         new codepipeline.Pipeline(this, 'Pipeline', {
-            // artifactBucket: s3.Bucket.fromBucketName(this, 'ArtifactBucket', props.artifactBucket),
             artifactBucket: props.artifactBucket,
             stages: [
                 {
@@ -76,7 +75,8 @@ export class CicdDockerStack extends cdk.Stack {
                         new codepipeline_actions.CodeBuildAction({
                             actionName: 'CodeTest',
                             project: codeTestProject,
-                            input: sourceOutput
+                            input: sourceOutput,
+                            type: codepipeline_actions.CodeBuildActionType.TEST
                         })
                     ]
                 },
@@ -86,7 +86,8 @@ export class CicdDockerStack extends cdk.Stack {
                         new codepipeline_actions.CodeBuildAction({
                             actionName: 'DockerBuild',
                             project: dockerBuildProject,
-                            input: sourceOutput
+                            input: sourceOutput,
+                            type: codepipeline_actions.CodeBuildActionType.BUILD
                         })
                     ]
                 }

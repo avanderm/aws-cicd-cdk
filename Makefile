@@ -6,7 +6,10 @@ deploy-ecr:
 		-c artifactBucket=$(ARTIFACT_BUCKET)
 
 deploy-ecs:
-	cdk deploy -a bin/cicd-cdk.js DeployPipeline
+	cdk deploy -a bin/cicd-cdk.js DeployPipeline \
+		-c repository=$(DOCKER_REPOSITORY) \
+		-c owner=$(OWNER) \
+		-c branch=$(DOCKER_BRANCH) \
 		-c artifactBucket=$(ARTIFACT_BUCKET)
 
 delete-ecr:
