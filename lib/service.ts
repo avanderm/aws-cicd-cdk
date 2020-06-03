@@ -58,7 +58,7 @@ export class QueueService extends cdk.Stack {
         const queue = new sqs.Queue(this, 'Queue');
 
         const taskRole = new iam.Role(this, 'TaskRole', {
-            assumedBy: new iam.ServicePrincipal('ecs.amazonaws.com')
+            assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com')
         });
 
         props.repository.grantPull(taskRole);
@@ -73,7 +73,7 @@ export class QueueService extends cdk.Stack {
 
         new ecs.ContainerDefinition(this, 'container', {
             command: [
-                "python main.py"
+                "main.py"
             ],
             environment: {
                 'QUEUE_URL': queue.queueUrl,
