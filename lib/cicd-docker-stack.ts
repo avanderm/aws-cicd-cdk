@@ -9,10 +9,12 @@ interface CicdDockerStackProps extends cdk.StackProps {
     repository: string;
     owner: string;
     branch?: string;
+    // artifactBucket: string;
+    artifactBucket: s3.IBucket;
 }
 
 export class CicdDockerStack extends cdk.Stack {
-    public readonly artifactBucket: s3.Bucket;
+    public readonly imageRepository: ecr.Repository;
 
     constructor(scope: cdk.Construct, id: string, props: CicdDockerStackProps) {
         super(scope, id, props);
@@ -20,11 +22,6 @@ export class CicdDockerStack extends cdk.Stack {
         const imageRepository = new ecr.Repository(this, 'ImageRepository', {
             removalPolicy: cdk.RemovalPolicy.DESTROY
         });
-
-        const artifactBucket = new s3.Bucket(this, 'ArtifactBucket', {
-            removalPolicy: cdk.RemovalPolicy.DESTROY
-        });
-        this.artifactBucket = artifactBucket;
 
         const codeTestProject = new codebuild.PipelineProject(this, 'CodeTestProject', {
             buildSpec: codebuild.BuildSpec.fromSourceFilename('buildspec/code-test.yml'),
@@ -56,7 +53,8 @@ export class CicdDockerStack extends cdk.Stack {
         const sourceOutput = new codepipeline.Artifact();
 
         new codepipeline.Pipeline(this, 'Pipeline', {
-            artifactBucket: artifactBucket,
+            // artifactBucket: s3.Bucket.fromBucketName(this, 'ArtifactBucket', props.artifactBucket),
+            artifactBucket: props.artifactBucket,
             stages: [
                 {
                     stageName: 'Source',
@@ -94,5 +92,8 @@ export class CicdDockerStack extends cdk.Stack {
                 }
             ]
         });
+
+        // exports
+        this.imageRepository = imageRepository;
     }
 }
