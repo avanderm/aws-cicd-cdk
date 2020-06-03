@@ -61,6 +61,7 @@ export class QueueService extends cdk.Stack {
             assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com')
         });
 
+        queue.grantConsumeMessages(taskRole);
         props.repository.grantPull(taskRole);
 
         const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {

@@ -41,6 +41,10 @@ export class CicdDockerStack extends cdk.Stack {
                 privileged: true,
                 environmentVariables: {
                     'REPOSITORY': {
+                        value: imageRepository.repositoryName,
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
+                    'REPOSITORY_URI': {
                         value: imageRepository.repositoryUri,
                         type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
                     }
