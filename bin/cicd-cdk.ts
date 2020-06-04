@@ -44,6 +44,7 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
 });
 
 let serviceParameters = new Map(Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8'))));
+console.log(serviceParameters);
 
 const mainStack = new service.MainStack(app, 'MainStack', {
     env: {
