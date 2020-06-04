@@ -6,27 +6,19 @@ import * as iam from '@aws-cdk/aws-iam';
 import * as logs from '@aws-cdk/aws-logs';
 import * as sqs from '@aws-cdk/aws-sqs';
 
+interface BaseResourcesProps extends cdk.StackProps {
+    vpc: ec2.IVpc;
+}
+
 export class BaseResources extends cdk.Stack {
     public readonly cluster: ecs.Cluster;
     public readonly logGroup: logs.LogGroup;
 
-    constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+    constructor(scope: cdk.Construct, id: string, props: BaseResourcesProps) {
         super(scope, id, props);
 
-        const vpc = ec2.Vpc.fromVpcAttributes(this, 'VPC', {
-            vpcId: 'vpc-c8bfc0ad',
-            availabilityZones: [
-                'eu-west-1a',
-                'eu-west-1b'
-            ],
-            privateSubnetIds: [
-                'subnet-95406fcd',
-                'subnet-4138db26'
-            ]
-        });
-
         const cluster = new ecs.Cluster(this, 'Cluster', {
-            vpc: vpc
+            vpc: props.vpc
         });
         this.cluster = cluster;
 

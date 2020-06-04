@@ -1,16 +1,13 @@
 #!/usr/bin/env node
 import * as cdk from '@aws-cdk/core';
-import * as ecr from '@aws-cdk/aws-ecr';
 import * as ecs from '@aws-cdk/aws-ecs';
-import { SharedStack } from '../lib/cicd-shared-stack';
-import { CicdDockerStack } from '../lib/cicd-docker-stack';
-import { CicdEcsStack } from '../lib/cicd-ecs-stack';
-import { BaseResources, QueueService } from '../lib/service';
+import * as external from '../lib/external';
+import * as cicd from '../lib/cicd';
+import * as service from '../lib/service';
 
 import { camelCase } from '../lib/utils';
 import fs = require('fs');
 import yaml = require('yaml');
-import { EcrImage } from '@aws-cdk/aws-ecs';
 
 const environment = process.env.CDK_ENVIRONMENT || 'test';
 const account = process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT;
@@ -20,14 +17,17 @@ const app = new cdk.App();
 
 const artifactBucket = app.node.tryGetContext('artifactBucket') || `artifacts-${account}-${region}`
 
-const baseResources = new BaseResources(app, 'BaseResources', {
+// already existing resources
+const externalResources = new external.ExternalResources(app, 'ExternalResources', {
     env: {
         account: account,
         region: region
-    }
+    },
+    artifactBucket: artifactBucket
 });
 
-const shared = new SharedStack(app, 'SharedStack', {
+// shared resources among non-CI/CD stacks
+const baseResources = new service.BaseResources(app, 'BaseResources', {
     env: {
         account: account,
         region: region
@@ -40,10 +40,10 @@ const shared = new SharedStack(app, 'SharedStack', {
         Environment: environment,
         Project: 'CICD'
     },
-    artifactBucket: artifactBucket
+    vpc: externalResources.vpc
 });
 
-const dockerPipeline = new CicdDockerStack(app, 'DockerPipeline', {
+const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
     env: {
         account: account,
         region: region
@@ -59,17 +59,16 @@ const dockerPipeline = new CicdDockerStack(app, 'DockerPipeline', {
     repository: app.node.tryGetContext('repository'),
     owner: app.node.tryGetContext('owner'),
     branch: app.node.tryGetContext('branch'),
-    artifactBucket: shared.artifactBucket
+    artifactBucket: externalResources.artifactBucket
 });
 
-// var processorStacks: Array<QueueService> = [];
 var processorServices: Map<string, ecs.BaseService> = new Map();
 
 var processors = yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8'));
 for (let processor in processors) {
     let parameters = processors[processor];
 
-    let processorStack = new QueueService(app, `QueueService-${camelCase(processor)}`, {
+    let processorStack = new service.QueueService(app, `QueueService-${camelCase(processor)}`, {
         env: {
             account: account,
             region: region
@@ -81,11 +80,10 @@ for (let processor in processors) {
         ageRestriction: parameters.ageRestriction
     });
 
-    // processorStacks.push(processorStack);
     processorServices.set(camelCase(processor), processorStack.service);
 }
 
-const deployPipeline = new CicdEcsStack(app, 'DeployPipeline', {
+const deployPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
     env: {
         account: account,
         region: region
@@ -101,5 +99,5 @@ const deployPipeline = new CicdEcsStack(app, 'DeployPipeline', {
     tag: 'latest',
     imageRepositoryName: dockerPipeline.imageRepository.repositoryName,
     ecsServices: processorServices,
-    artifactBucket: shared.artifactBucket
+    artifactBucket: externalResources.artifactBucket
 });
