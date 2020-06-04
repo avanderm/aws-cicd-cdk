@@ -6,8 +6,6 @@ import * as iam from '@aws-cdk/aws-iam';
 import * as logs from '@aws-cdk/aws-logs';
 import * as sqs from '@aws-cdk/aws-sqs';
 
-import { camelCase } from '../lib/utils';
-
 const DEFAULT_ECR_TAG: string = 'latest';
 
 interface QueueServiceProps {
@@ -108,7 +106,7 @@ export class MainStack extends cdk.Stack {
             });
 
             if (imageTag === DEFAULT_ECR_TAG) {
-                listeningServices.set(camelCase(name), serviceConstruct.service);
+                listeningServices.set(name, serviceConstruct.service);
             }
         }
 

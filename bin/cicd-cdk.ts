@@ -3,6 +3,7 @@ import * as cdk from '@aws-cdk/core';
 import * as external from '../lib/external';
 import * as cicd from '../lib/cicd';
 import * as service from '../lib/service';
+import { camelCase } from '../lib/utils';
 
 import fs = require('fs');
 import yaml = require('yaml');
@@ -45,7 +46,7 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
 let serviceParameters = new Map<string, service.ServiceProps>();
 
 for (let [name, params] of Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8')))) {
-    serviceParameters.set(name, <service.ServiceProps> params);
+    serviceParameters.set(camelCase(name), <service.ServiceProps> params);
 }
 
 const mainStack = new service.MainStack(app, 'MainStack', {

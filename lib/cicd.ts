@@ -8,123 +8,125 @@ import * as ecs from '@aws-cdk/aws-ecs';
 import * as iam from '@aws-cdk/aws-iam';
 import * as s3 from '@aws-cdk/aws-s3';
 
-export class PipelinePermissions extends cdk.Stack {
-    public readonly pipelineDeploymentRole: iam.Role;
+// export class PipelinePermissions extends cdk.Stack {
+//     public readonly pipelineDeploymentRole: iam.Role;
 
-    constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
-        super(scope, id, props);
+//     constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+//         super(scope, id, props);
 
-        const account = cdk.Stack.of(this).account;
-        const region = cdk.Stack.of(this).region;
+//         const account = cdk.Stack.of(this).account;
+//         const region = cdk.Stack.of(this).region;
 
-        // CodePipeline self update
-        const ecrPermissions = new iam.PolicyStatement();
-        ecrPermissions.addAllResources();
-        ecrPermissions.addActions(
-            'ecr:CreateRepository',
-            'ecr:DeleteRepository',
-            'ecr:DescribeRepositories'
-        );
+//         // CodePipeline self update
+//         const ecrPermissions = new iam.PolicyStatement();
+//         ecrPermissions.addAllResources();
+//         ecrPermissions.addActions(
+//             'ecr:CreateRepository',
+//             'ecr:DeleteRepository',
+//             'ecr:DescribeRepositories',
+//             'ecr:PutLifecyclePolicy'
+//         );
 
-        const codebuildPermissions = new iam.PolicyStatement();
-        codebuildPermissions.addAllResources();
-        codebuildPermissions.addActions(
-            'codebuild:CreateProject',
-            'codebuild:DeleteProject',
-            'codebuild:UpdateProject',
-            'codebuild:BatchGetProjects'
-        );
+//         const codebuildPermissions = new iam.PolicyStatement();
+//         codebuildPermissions.addAllResources();
+//         codebuildPermissions.addActions(
+//             'codebuild:CreateProject',
+//             'codebuild:DeleteProject',
+//             'codebuild:UpdateProject',
+//             'codebuild:BatchGetProjects'
+//         );
 
-        const codepipelinePermissions = new iam.PolicyStatement();
-        codepipelinePermissions.addAllResources();
-        codepipelinePermissions.addActions(
-            'codepipeline:GetPipeline',
-            'codepipeline:UpdatePipeline',
-            'codepipeline:DeletePipeline',
-            'codepipeline:DeregisterWebhookWithThirdParty',
-            'codepipeline:DeleteWebhook',
-            'codepipeline:StartPipelineExecution'
-        );
+//         const codepipelinePermissions = new iam.PolicyStatement();
+//         codepipelinePermissions.addAllResources();
+//         codepipelinePermissions.addActions(
+//             'codepipeline:GetPipeline',
+//             'codepipeline:UpdatePipeline',
+//             'codepipeline:DeletePipeline',
+//             'codepipeline:DeregisterWebhookWithThirdParty',
+//             'codepipeline:DeleteWebhook',
+//             'codepipeline:StartPipelineExecution'
+//         );
 
-        const secretsPermissions = new iam.PolicyStatement();
-        secretsPermissions.addResources(`arn:aws:secretsmanager:${region}:${account}:secret:github/hp-antoine/*`);
-        secretsPermissions.addActions('secretsmanager:GetSecretValue');
+//         const secretsPermissions = new iam.PolicyStatement();
+//         secretsPermissions.addResources(`arn:aws:secretsmanager:${region}:${account}:secret:github/hp-antoine/*`);
+//         secretsPermissions.addActions('secretsmanager:GetSecretValue');
 
-        // General policies
-        const cfnPermissions = new iam.PolicyStatement();
-        cfnPermissions.addAllResources();
-        cfnPermissions.addActions(
-            'cloudformation:CreateStack',
-            'cloudformation:DeleteStack',
-            'cloudformation:UpdateStack'
-        );
+//         // General policies
+//         const cfnPermissions = new iam.PolicyStatement();
+//         cfnPermissions.addAllResources();
+//         cfnPermissions.addActions(
+//             'cloudformation:CreateStack',
+//             'cloudformation:DeleteStack',
+//             'cloudformation:UpdateStack'
+//         );
 
-        const iamPermissions = new iam.PolicyStatement();
-        iamPermissions.addAllResources();
-        iamPermissions.addActions(
-            'iam:PassRole',
-            'iam:UpdateAssumeRolePolicy'
-        );
+//         const iamPermissions = new iam.PolicyStatement();
+//         iamPermissions.addAllResources();
+//         iamPermissions.addActions(
+//             'iam:PassRole',
+//             'iam:UpdateAssumeRolePolicy'
+//         );
 
-        const iamRolePermissions = new iam.PolicyStatement();
-        iamRolePermissions.addAllResources();
-        iamRolePermissions.addActions(
-            'iam:CreateRole',
-            'iam:DeleteRole',
-            'iam:GetRole'
-        );
+//         const iamRolePermissions = new iam.PolicyStatement();
+//         iamRolePermissions.addAllResources();
+//         iamRolePermissions.addActions(
+//             'iam:CreateRole',
+//             'iam:DeleteRole',
+//             'iam:GetRole'
+//         );
 
-        const iamPolicyPermissions = new iam.PolicyStatement();
-        iamPolicyPermissions.addAllResources();
-        iamPolicyPermissions.addActions(
-            'iam:PutRolePolicy',
-            'iam:AttachRolePolicy',
-            'iam:DetachRolePolicy',
-            'iam:DeleteRolePolicy',
-            'iam:GetRolePolicy'
-        );
+//         const iamPolicyPermissions = new iam.PolicyStatement();
+//         iamPolicyPermissions.addAllResources();
+//         iamPolicyPermissions.addActions(
+//             'iam:PutRolePolicy',
+//             'iam:AttachRolePolicy',
+//             'iam:DetachRolePolicy',
+//             'iam:DeleteRolePolicy',
+//             'iam:GetRolePolicy'
+//         );
 
-        const logsPermissions = new iam.PolicyStatement();
-        logsPermissions.addAllResources();
-        logsPermissions.addActions(
-            'logs:CreateLogGroup',
-            'logs:DeleteLogGroup',
-            'logs:DescribeLogGroups',
-            'logs:PutRetentionPolicy'
-        );
+//         const logsPermissions = new iam.PolicyStatement();
+//         logsPermissions.addAllResources();
+//         logsPermissions.addActions(
+//             'logs:CreateLogGroup',
+//             'logs:DeleteLogGroup',
+//             'logs:DescribeLogGroups',
+//             'logs:PutRetentionPolicy'
+//         );
 
-        const eventsPermissions = new iam.PolicyStatement();
-        eventsPermissions.addAllResources();
-        eventsPermissions.addActions(
-            'events:CreateRule',
-            'events:DeleteRule',
-            'events:PutTargets',
-            'events:RemoveTargets',
-        );
+//         const eventsPermissions = new iam.PolicyStatement();
+//         eventsPermissions.addAllResources();
+//         eventsPermissions.addActions(
+//             'events:CreateRule',
+//             'events:DeleteRule',
+//             'events:DescribeRule',
+//             'events:PutTargets',
+//             'events:RemoveTargets',
+//         );
 
-        const pipelineDeploymentRole = new iam.Role(this, 'PipelineDeploymentRole', {
-            assumedBy: new iam.ServicePrincipal('cloudformation.amazonaws.com'),
-            inlinePolicies: {
-                'access': new iam.PolicyDocument({
-                    statements: [
-                        cfnPermissions,
-                        codebuildPermissions,
-                        codepipelinePermissions,
-                        ecrPermissions,
-                        eventsPermissions,
-                        iamPermissions,
-                        iamRolePermissions,
-                        iamPolicyPermissions,
-                        logsPermissions,
-                        secretsPermissions,
-                    ]
-                })
-            }
-        });
+//         const pipelineDeploymentRole = new iam.Role(this, 'PipelineDeploymentRole', {
+//             assumedBy: new iam.ServicePrincipal('cloudformation.amazonaws.com'),
+//             inlinePolicies: {
+//                 'access': new iam.PolicyDocument({
+//                     statements: [
+//                         cfnPermissions,
+//                         codebuildPermissions,
+//                         codepipelinePermissions,
+//                         ecrPermissions,
+//                         eventsPermissions,
+//                         iamPermissions,
+//                         iamRolePermissions,
+//                         iamPolicyPermissions,
+//                         logsPermissions,
+//                         secretsPermissions,
+//                     ]
+//                 })
+//             }
+//         });
 
-        this.pipelineDeploymentRole = pipelineDeploymentRole;
-    }
-}
+//         this.pipelineDeploymentRole = pipelineDeploymentRole;
+//     }
+// }
 
 interface DockerStackProps extends cdk.StackProps {
     repository: string;
@@ -359,99 +361,6 @@ export class CdkStack extends cdk.Stack {
             }
         });
 
-        const selfDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
-            actionName: 'CdkPipeline',
-            capabilities: [
-                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
-            ],
-            // deploymentRole: props.pipelineDeploymentRole,
-            templatePath: buildOutput.atPath('CdkPipeline.template.json'),
-            stackName: 'CdkPipeline',
-            adminPermissions: false,
-            runOrder: 1
-        });
-
-        const dockerDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
-            actionName: 'DockerPipeline',
-            capabilities: [
-                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
-            ],
-            // deploymentRole: props.pipelineDeploymentRole,
-            templatePath: buildOutput.atPath('DockerPipeline.template.json'),
-            stackName: 'DockerPipeline',
-            adminPermissions: false,
-            runOrder: 2
-        });
-
-        const ecsDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
-            actionName: 'DeployPipeline',
-            capabilities: [
-                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
-            ],
-            // deploymentRole: props.pipelineDeploymentRole,
-            templatePath: buildOutput.atPath('DeployPipeline.template.json'),
-            stackName: 'DeployPipeline',
-            adminPermissions: false,
-            runOrder: 2
-        });
-
-        const mainDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
-            actionName: 'Deploy',
-            capabilities: [
-                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
-            ],
-            templatePath: buildOutput.atPath('MainStack.template.json'),
-            stackName: 'MainStack',
-            adminPermissions: false
-        });
-
-        new codepipeline.Pipeline(this, 'Pipeline', {
-            artifactBucket: props.artifactBucket,
-            restartExecutionOnUpdate: true,
-            stages: [
-                {
-                    stageName: 'Source',
-                    actions: [
-                        new codepipeline_actions.GitHubSourceAction({
-                            actionName: 'Source',
-                            branch: props.branch ? props.branch : 'master',
-                            oauthToken: cdk.SecretValue.secretsManager('github/hp-antoine/token'),
-                            output: sourceOutput,
-                            owner: props.owner,
-                            repo: props.repository,
-                            trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
-                        })
-                    ]
-                },
-                {
-                    stageName: 'Build',
-                    actions: [
-                        new codepipeline_actions.CodeBuildAction({
-                            actionName: 'CloudFormationBuild',
-                            project: buildProject,
-                            input: sourceOutput,
-                            outputs: [buildOutput],
-                            type: codepipeline_actions.CodeBuildActionType.BUILD
-                        })
-                    ]
-                },
-                {
-                    stageName: 'Update',
-                    actions: [
-                        selfDeployment,
-                    ]
-                },
-                {
-                    stageName: 'Deploy',
-                    actions: [
-                        mainDeployment,
-                        dockerDeployment,
-                        ecsDeployment
-                    ]
-                }
-            ]
-        });
-
         const codebuildPermissions = new iam.PolicyStatement();
         codebuildPermissions.addAllResources();
         codebuildPermissions.addActions(
@@ -464,12 +373,16 @@ export class CdkStack extends cdk.Stack {
         const codepipelinePermissions = new iam.PolicyStatement();
         codepipelinePermissions.addAllResources();
         codepipelinePermissions.addActions(
+            'codepipeline:CreatePipeline',
             'codepipeline:GetPipeline',
-            'codepipeline:UpdatePipeline',
+            'codepipeline:GetPipelineState',
             'codepipeline:DeletePipeline',
-            'codepipeline:DeregisterWebhookWithThirdParty',
             'codepipeline:DeleteWebhook',
-            'codepipeline:StartPipelineExecution'
+            'codepipeline:DeregisterWebhookWithThirdParty',
+            'codepipeline:PutWebhook',
+            'codepipeline:RegisterWebhookWithThirdParty',
+            'codepipeline:StartPipelineExecution',
+            'codepipeline:UpdatePipeline',
         );
 
         const ec2Permissions = new iam.PolicyStatement();
@@ -487,7 +400,8 @@ export class CdkStack extends cdk.Stack {
         ecrPermissions.addActions(
             'ecr:CreateRepository',
             'ecr:DeleteRepository',
-            'ecr:DescribeRepositories'
+            'ecr:DescribeRepositories',
+            'ecr:PutLifeCyclePolicy'
         );
 
         const ecsClusterPermissions = new iam.PolicyStatement();
@@ -514,7 +428,9 @@ export class CdkStack extends cdk.Stack {
         eventsPermissions.addActions(
             'events:CreateRule',
             'events:DeleteRule',
+            'events:DescribeRule',
             'events:PutTargets',
+            'events:PutRule',
             'events:RemoveTargets',
         );
 
@@ -561,24 +477,165 @@ export class CdkStack extends cdk.Stack {
         sqsPermissions.addActions(
             'sqs:CreateQueue',
             'sqs:DeleteQueue',
+            'sqs:GetQueueAttributes',
             'sqs:UpdateQueue'
         );
+
+        const tagPermissions = new iam.PolicyStatement();
+        tagPermissions.addAllResources();
+        tagPermissions.addActions(
+            'tag:TagResources',
+            'tag:UntagResources',
+        );
+
+        const selfDeploymentRole = new iam.Role(this, 'TaskRole', {
+            assumedBy: new iam.ServicePrincipal('cloudformation.amazonaws.com'),
+            inlinePolicies: {
+                'self-destruct': new iam.PolicyDocument({
+                    statements: [
+                        iamRolePermissions
+                    ]
+                });
+            }
+        });
+
+        const roleResource = selfDeploymentRole.node.findChild('Resource') as cdk.CfnResource;
+        const otherRoleResource = buildProject.role?.node.findChild('Resource') as cdk.CfnResource;
+        otherRoleResource.addDependsOn(roleResource);
+
+        selfDeploymentRole.addToPolicy(iamPermissions);
+        selfDeploymentRole.addToPolicy(iamPolicyPermissions);
+        // selfDeploymentRole.addToPolicy(iamRolePermissions);
+        selfDeploymentRole.addToPolicy(codebuildPermissions);
+        selfDeploymentRole.addToPolicy(codepipelinePermissions);
+        selfDeploymentRole.addToPolicy(tagPermissions);
+
+        const selfDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+            actionName: 'CdkPipeline',
+            capabilities: [
+                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
+            ],
+            deploymentRole: selfDeploymentRole,
+            templatePath: buildOutput.atPath('CdkPipeline.template.json'),
+            stackName: 'CdkPipeline',
+            adminPermissions: false,
+            runOrder: 1
+        });
+
+        const dockerDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+            actionName: 'DockerPipeline',
+            capabilities: [
+                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
+            ],
+            // deploymentRole: props.pipelineDeploymentRole,
+            templatePath: buildOutput.atPath('DockerPipeline.template.json'),
+            stackName: 'DockerPipeline',
+            adminPermissions: false,
+            runOrder: 1
+        });
+
+        const ecsDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+            actionName: 'DeployPipeline',
+            capabilities: [
+                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
+            ],
+            // deploymentRole: props.pipelineDeploymentRole,
+            templatePath: buildOutput.atPath('DeployPipeline.template.json'),
+            stackName: 'DeployPipeline',
+            adminPermissions: false,
+            runOrder: 3
+        });
+
+        const mainDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+            actionName: 'Deploy',
+            capabilities: [
+                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
+            ],
+            templatePath: buildOutput.atPath('MainStack.template.json'),
+            stackName: 'MainStack',
+            adminPermissions: false,
+            runOrder: 2
+        });
+
+        new codepipeline.Pipeline(this, 'Pipeline', {
+            artifactBucket: props.artifactBucket,
+            restartExecutionOnUpdate: true,
+            stages: [
+                {
+                    stageName: 'Source',
+                    actions: [
+                        new codepipeline_actions.GitHubSourceAction({
+                            actionName: 'Source',
+                            branch: props.branch ? props.branch : 'master',
+                            oauthToken: cdk.SecretValue.secretsManager('github/hp-antoine/token'),
+                            output: sourceOutput,
+                            owner: props.owner,
+                            repo: props.repository,
+                            trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
+                        })
+                    ]
+                },
+                {
+                    stageName: 'Build',
+                    actions: [
+                        new codepipeline_actions.CodeBuildAction({
+                            actionName: 'CloudFormationBuild',
+                            project: buildProject,
+                            input: sourceOutput,
+                            outputs: [buildOutput],
+                            type: codepipeline_actions.CodeBuildActionType.BUILD
+                        })
+                    ]
+                },
+                {
+                    stageName: 'Update',
+                    actions: [
+                        selfDeployment,
+                    ]
+                },
+                {
+                    stageName: 'Deploy',
+                    actions: [
+                        dockerDeployment,
+                        mainDeployment,
+                        ecsDeployment
+                    ]
+                }
+            ]
+        });
 
         dockerDeployment.addToDeploymentRolePolicy(codebuildPermissions);
         dockerDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
         dockerDeployment.addToDeploymentRolePolicy(ecrPermissions);
+        dockerDeployment.addToDeploymentRolePolicy(iamPermissions);
+        dockerDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
+        dockerDeployment.addToDeploymentRolePolicy(iamRolePermissions);
+        dockerDeployment.addToDeploymentRolePolicy(secretsPermissions);
+        dockerDeployment.addToDeploymentRolePolicy(tagPermissions);
 
         ecsDeployment.addToDeploymentRolePolicy(codebuildPermissions);
         ecsDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
+        ecsDeployment.addToDeploymentRolePolicy(eventsPermissions);
+        ecsDeployment.addToDeploymentRolePolicy(iamPermissions);
+        ecsDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
+        ecsDeployment.addToDeploymentRolePolicy(iamRolePermissions);
+        ecsDeployment.addToDeploymentRolePolicy(tagPermissions);
 
-        mainDeployment.addToDeploymentRolePolicy(iamRolePermissions);
-        mainDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
-        mainDeployment.addToDeploymentRolePolicy(logsPermissions);
         mainDeployment.addToDeploymentRolePolicy(ec2Permissions);
         mainDeployment.addToDeploymentRolePolicy(ecsClusterPermissions);
         mainDeployment.addToDeploymentRolePolicy(ecsServicePermissions);
+        mainDeployment.addToDeploymentRolePolicy(iamPermissions);
+        mainDeployment.addToDeploymentRolePolicy(iamRolePermissions);
+        mainDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
+        mainDeployment.addToDeploymentRolePolicy(logsPermissions);
         mainDeployment.addToDeploymentRolePolicy(sqsPermissions);
+        mainDeployment.addToDeploymentRolePolicy(tagPermissions);
 
+        selfDeployment.addToDeploymentRolePolicy(codebuildPermissions);
+        selfDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
         selfDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
+        selfDeployment.addToDeploymentRolePolicy(iamRolePermissions);
+        selfDeployment.addToDeploymentRolePolicy(secretsPermissions);
+        selfDeployment.addToDeploymentRolePolicy(tagPermissions);
     }
 }
