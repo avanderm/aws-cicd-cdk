@@ -45,7 +45,7 @@ export class PipelinePermissions extends cdk.Stack {
         );
 
         const secretsPermissions = new iam.PolicyStatement();
-        secretsPermissions.addResources(`arn:aws:secretsmanager:${region}:${account}:secret:github/hp-machine-user/*`);
+        secretsPermissions.addResources(`arn:aws:secretsmanager:${region}:${account}:secret:github/hp-antoine/*`);
         secretsPermissions.addActions('secretsmanager:GetSecretValue');
 
         // General policies
