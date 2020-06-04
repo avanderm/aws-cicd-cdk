@@ -43,7 +43,11 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
     artifactBucket: externalResources.artifactBucket
 });
 
-let serviceParameters = new Map(Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8'))));
+let serviceParameters = new Map<string, service.ServiceProps>();
+
+for (let [name, params] of Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8')))) {
+    serviceParameters.set(name, <service.ServiceProps> params);
+}
 console.log(serviceParameters);
 
 const mainStack = new service.MainStack(app, 'MainStack', {

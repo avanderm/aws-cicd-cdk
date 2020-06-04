@@ -67,7 +67,7 @@ class QueueService extends cdk.Construct {
     }
 }
 
-interface ServiceProps {
+export interface ServiceProps {
     ageRestriction: number;
     version?: string;
 }
