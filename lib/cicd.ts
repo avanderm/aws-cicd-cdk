@@ -30,7 +30,9 @@ export class PipelinePermissions extends cdk.Stack {
         codebuildPermissions.addAllResources();
         codebuildPermissions.addActions(
             'codebuild:CreateProject',
-            'codebuild:DeleteProject'
+            'codebuild:DeleteProject',
+            'codebuild:UpdateProject',
+            'codebuild:BatchGetProjects'
         );
 
         const codepipelinePermissions = new iam.PolicyStatement();
@@ -118,6 +120,7 @@ interface DockerStackProps extends cdk.StackProps {
     repository: string;
     owner: string;
     branch?: string;
+    tag?: string;
     artifactBucket: s3.IBucket;
 }
 
@@ -163,6 +166,10 @@ export class DockerStack extends cdk.Stack {
                     'REPOSITORY_URI': {
                         value: imageRepository.repositoryUri,
                         type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
+                    'IMAGE_TAG': {
+                        value: props.tag ? props.tag : 'latest',
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
                     }
                 }
             }
@@ -180,7 +187,7 @@ export class DockerStack extends cdk.Stack {
                     actions: [
                         new codepipeline_actions.GitHubSourceAction({
                             actionName: 'Source',
-                            branch: props.branch || 'master',
+                            branch: props.branch ? props.branch : 'master',
                             oauthToken: cdk.SecretValue.secretsManager('github/hp-antoine/token'),
                             output: sourceOutput,
                             owner: props.owner,
@@ -223,7 +230,7 @@ interface EcsStackProps extends cdk.StackProps {
     artifactBucket: s3.IBucket;
     ecsServices: Map<string, ecs.FargateService>;
     imageRepositoryName: string;
-    tag: string;
+    tag?: string;
 }
 
 export class EcsStack extends cdk.Stack {
@@ -285,7 +292,7 @@ export class EcsStack extends cdk.Stack {
                             actionName: 'Image',
                             output: imageOutput,
                             repository: ecr.Repository.fromRepositoryName(this, 'Repository', props.imageRepositoryName),
-                            imageTag: props.tag
+                            imageTag: props.tag ? props.tag : 'latest'
                         })
                     ]
                 },
@@ -358,7 +365,7 @@ export class CdkStack extends cdk.Stack {
                     actions: [
                         new codepipeline_actions.GitHubSourceAction({
                             actionName: 'Source',
-                            branch: props.branch || 'master',
+                            branch: props.branch ? props.branch : 'master',
                             oauthToken: cdk.SecretValue.secretsManager('github/hp-antoine/token'),
                             output: sourceOutput,
                             owner: props.owner,

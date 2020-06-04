@@ -1,29 +1,35 @@
+deploy = cdk deploy -a bin/cicd-cdk.js $(1) \
+	-c dockerRepository=$(DOCKER_REPOSITORY) \
+	-c cdkRepository=$(CDK_REPOSITORY) \
+	-c owner=$(OWNER) \
+	-c artifactBucket=$(ARTIFACT_BUCKET)
+
+delete = cdk destroy -a bin/cicd-cdk.js $(1)
+	# -c dockerRepository=$(DOCKER_REPOSITORY) \
+	# -c cdkRepository=$(CDK_REPOSITORY) \
+	# -c owner=$(OWNER) \
+	# -c artifactBucket=$(ARTIFACT_BUCKET)
+
+deploy-permissions:
+	$(call deploy,CicdPipelinePermissions)
+
+delete-permissions:
+	$(call delete,CicdPipelinePermissions)
+
 deploy-ecr:
-	cdk deploy -a bin/cicd-cdk.js DockerPipeline \
-		-c dockerRepository=$(DOCKER_REPOSITORY) \
-		-c cdkRepository=$(CDK_REPOSITORY) \
-		-c owner=$(OWNER) \
-		-c branch=$(DOCKER_BRANCH) \
-		-c artifactBucket=$(ARTIFACT_BUCKET)
+	$(call deploy,DockerPipeline)
 
 deploy-ecs:
-	cdk deploy -a bin/cicd-cdk.js DeployPipeline \
-		-c dockerRepository=$(DOCKER_REPOSITORY) \
-		-c cdkRepository=$(CDK_REPOSITORY) \
-		-c owner=$(OWNER) \
-		-c branch=$(DOCKER_BRANCH) \
-		-c artifactBucket=$(ARTIFACT_BUCKET)
+	$(call deploy,DeployPipeline)
 
 deploy-cdk:
-	cdk deploy -a bin/cicd-cdk.js CdkPipeline \
-		-c dockerRepository=$(DOCKER_REPOSITORY) \
-		-c cdkRepository=$(CDK_REPOSITORY) \
-		-c owner=$(OWNER) \
-		-c branch=$(DOCKER_BRANCH) \
-		-c artifactBucket=$(ARTIFACT_BUCKET)
+	$(call deploy,CdkPipeline)
 
 delete-ecr:
-	cdk destroy -a bin/cicd-cdk.js DockerPipeline
+	$(call delete,DockerPipeline)
 
 delete-ecs:
-	cdk destroy -a bin/cicd-cdk.js DeployPipeline
+	$(call delete,DeployPipeline)
+
+delete-cdk:
+	$(call delete,CdkPipeline)

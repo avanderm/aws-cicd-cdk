@@ -39,7 +39,6 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
     },
     repository: app.node.tryGetContext('dockerRepository'),
     owner: app.node.tryGetContext('owner'),
-    branch: app.node.tryGetContext('branch'),
     artifactBucket: externalResources.artifactBucket
 });
 
@@ -48,7 +47,6 @@ let serviceParameters = new Map<string, service.ServiceProps>();
 for (let [name, params] of Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8')))) {
     serviceParameters.set(name, <service.ServiceProps> params);
 }
-console.log(serviceParameters);
 
 const mainStack = new service.MainStack(app, 'MainStack', {
     env: {
@@ -68,7 +66,7 @@ const mainStack = new service.MainStack(app, 'MainStack', {
     vpc: externalResources.vpc
 });
 
-const deployPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
+new cicd.EcsStack(app, 'DeployPipeline', {
     env: {
         account: account,
         region: region
@@ -81,7 +79,6 @@ const deployPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
         Environment: environment,
         Project: 'CICD'
     },
-    tag: 'latest',
     imageRepositoryName: dockerPipeline.imageRepository.repositoryName,
     ecsServices: mainStack.listeningServices,
     artifactBucket: externalResources.artifactBucket
@@ -117,8 +114,7 @@ new cicd.CdkStack(app, 'CdkPipeline', {
     },
     repository: app.node.tryGetContext('cdkRepository'),
     owner: app.node.tryGetContext('owner'),
-    // branch: app.node.tryGetContext('branch'),
     branch: 'cdk-pipeline',
     artifactBucket: externalResources.artifactBucket,
     pipelineDeploymentRole: pipelinePermissions.pipelineDeploymentRole
-})
+});
