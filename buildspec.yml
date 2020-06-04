@@ -1,0 +1,16 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      nodejs: 12.14
+  pre_build:
+    commands:
+      - npm install
+  build:
+    commands:
+      - npm run build
+      - npm run cdk synth -a bin/cicd-cdk.js -- -o $BUILD_DIR
+artifacts:
+  base-directory: $BUILD_DIR
+  files:
+    - "**/*"

@@ -1,13 +1,23 @@
 deploy-ecr:
 	cdk deploy -a bin/cicd-cdk.js DockerPipeline \
-		-c repository=$(DOCKER_REPOSITORY) \
+		-c dockerRepository=$(DOCKER_REPOSITORY) \
+		-c cdkRepository=$(CDK_REPOSITORY) \
 		-c owner=$(OWNER) \
 		-c branch=$(DOCKER_BRANCH) \
 		-c artifactBucket=$(ARTIFACT_BUCKET)
 
 deploy-ecs:
 	cdk deploy -a bin/cicd-cdk.js DeployPipeline \
-		-c repository=$(DOCKER_REPOSITORY) \
+		-c dockerRepository=$(DOCKER_REPOSITORY) \
+		-c cdkRepository=$(CDK_REPOSITORY) \
+		-c owner=$(OWNER) \
+		-c branch=$(DOCKER_BRANCH) \
+		-c artifactBucket=$(ARTIFACT_BUCKET)
+
+deploy-cdk:
+	cdk deploy -a bin/cicd-cdk.js CdkPipeline \
+		-c dockerRepository=$(DOCKER_REPOSITORY) \
+		-c cdkRepository=$(CDK_REPOSITORY) \
 		-c owner=$(OWNER) \
 		-c branch=$(DOCKER_BRANCH) \
 		-c artifactBucket=$(ARTIFACT_BUCKET)

@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 import * as cdk from '@aws-cdk/core';
-import * as ecs from '@aws-cdk/aws-ecs';
 import * as external from '../lib/external';
 import * as cicd from '../lib/cicd';
 import * as service from '../lib/service';
 
-import { camelCase } from '../lib/utils';
 import fs = require('fs');
 import yaml = require('yaml');
 
@@ -24,23 +22,6 @@ const externalResources = new external.ExternalResources(app, 'ExternalResources
         region: region
     },
     artifactBucket: artifactBucket
-});
-
-// shared resources among non-CI/CD stacks
-const baseResources = new service.BaseResources(app, 'BaseResources', {
-    env: {
-        account: account,
-        region: region
-    },
-    tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
-        Owner: 'antoine',
-        Environment: environment,
-        Project: 'CICD'
-    },
-    vpc: externalResources.vpc
 });
 
 const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
@@ -62,26 +43,25 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
     artifactBucket: externalResources.artifactBucket
 });
 
-var processorServices: Map<string, ecs.BaseService> = new Map();
+let serviceParameters = new Map(Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8'))));
 
-var processors = yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8'));
-for (let processor in processors) {
-    let parameters = processors[processor];
-
-    let processorStack = new service.QueueService(app, `QueueService-${camelCase(processor)}`, {
-        env: {
-            account: account,
-            region: region
-        },
-        repository: dockerPipeline.imageRepository,
-        tag: parameters.version,
-        logGroup: baseResources.logGroup,
-        cluster: baseResources.cluster,
-        ageRestriction: parameters.ageRestriction
-    });
-
-    processorServices.set(camelCase(processor), processorStack.service);
-}
+const mainStack = new service.MainStack(app, 'MainStack', {
+    env: {
+        account: account,
+        region: region
+    },
+    tags: {
+        Pillar: 'hs',
+        Domain: 'hp',
+        Team: 'hp',
+        Owner: 'antoine',
+        Environment: environment,
+        Project: 'CICD'
+    },
+    mappings: serviceParameters,
+    repository: dockerPipeline.imageRepository,
+    vpc: externalResources.vpc
+});
 
 const deployPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
     env: {
@@ -98,6 +78,42 @@ const deployPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
     },
     tag: 'latest',
     imageRepositoryName: dockerPipeline.imageRepository.repositoryName,
-    ecsServices: processorServices,
+    ecsServices: mainStack.listeningServices,
     artifactBucket: externalResources.artifactBucket
 });
+
+const pipelinePermissions = new cicd.PipelinePermissions(app, 'CicdPipelinePermissions', {
+    env: {
+        account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
+        region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION
+    },
+    tags: {
+        Pillar: 'hs',
+        Domain: 'hp',
+        Team: 'hp',
+        Owner: 'antoine',
+        Environment: environment,
+        Project: 'CICD'
+    }
+});
+
+new cicd.CdkStack(app, 'CdkPipeline', {
+    env: {
+        account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
+        region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION
+    },
+    tags: {
+        Pillar: 'hs',
+        Domain: 'hp',
+        Team: 'hp',
+        Owner: 'antoine',
+        Environment: environment,
+        Project: 'CICD'
+    },
+    repository: app.node.tryGetContext('cdkRepository'),
+    owner: app.node.tryGetContext('owner'),
+    // branch: app.node.tryGetContext('branch'),
+    branch: 'cdk-pipeline',
+    artifactBucket: externalResources.artifactBucket,
+    pipelineDeploymentRole: pipelinePermissions.pipelineDeploymentRole
+})
