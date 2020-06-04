@@ -37,7 +37,7 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
         Environment: environment,
         Project: 'CICD'
     },
-    repository: app.node.tryGetContext('repository'),
+    repository: app.node.tryGetContext('dockerRepository'),
     owner: app.node.tryGetContext('owner'),
     branch: app.node.tryGetContext('branch'),
     artifactBucket: externalResources.artifactBucket
