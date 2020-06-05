@@ -3,6 +3,10 @@ phases:
   install:
     runtime-versions:
       nodejs: 12
+    commands:
+      - apt-get update
+      - apt-get install -y jq moreutils
+      - jq --version
   pre_build:
     commands:
       - npm install
@@ -10,6 +14,9 @@ phases:
     commands:
       - npm run build
       - npm run cdk synth -- -a bin/cicd-cdk.js -o $BUILD_DIR -c dockerRepository=aws-cicd-docker -c cdkRepository=aws-cicd-cdk -c owner=avanderm -c branch=master -c artifactBucket=antoine.test
+  post_build:
+    commands:
+      - cat templateConfiguration.json | jq --arg env $ENVIRONMENT '.Tags.Environment = $env' | sponge templateConfiguration.json
 artifacts:
   secondary-artifacts:
     cdkOutput:

@@ -85,21 +85,6 @@ const ecsPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
     artifactBucket: externalResources.artifactBucket
 });
 
-// const pipelinePermissions = new cicd.PipelinePermissions(app, 'CicdPipelinePermissions', {
-//     env: {
-//         account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
-//         region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION
-//     },
-//     tags: {
-//         Pillar: 'hs',
-//         Domain: 'hp',
-//         Team: 'hp',
-//         Owner: 'antoine',
-//         Environment: environment,
-//         Project: 'CICD'
-//     }
-// });
-
 const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     env: {
         account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
@@ -117,7 +102,7 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     owner: app.node.tryGetContext('owner'),
     branch: 'cdk-pipeline',
     artifactBucket: externalResources.artifactBucket,
-    // pipelineDeploymentRole: pipelinePermissions.pipelineDeploymentRole
+    environment: environment
 });
 
 dockerPipeline.addDependency(cdkPipeline);
