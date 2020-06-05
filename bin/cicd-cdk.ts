@@ -62,28 +62,29 @@ const mainStack = new service.MainStack(app, 'MainStack', {
         Environment: environment,
         Project: 'CICD'
     },
+    artifactBucket: externalResources.artifactBucket,
     mappings: serviceParameters,
     repository: dockerPipeline.imageRepository,
     vpc: externalResources.vpc
 });
 
-const ecsPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
-    env: {
-        account: account,
-        region: region
-    },
-    tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
-        Owner: 'antoine',
-        Environment: environment,
-        Project: 'CICD'
-    },
-    imageRepositoryName: dockerPipeline.imageRepository.repositoryName,
-    ecsServices: mainStack.listeningServices,
-    artifactBucket: externalResources.artifactBucket
-});
+// const ecsPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
+//     env: {
+//         account: account,
+//         region: region
+//     },
+//     tags: {
+//         Pillar: 'hs',
+//         Domain: 'hp',
+//         Team: 'hp',
+//         Owner: 'antoine',
+//         Environment: environment,
+//         Project: 'CICD'
+//     },
+//     imageRepositoryName: dockerPipeline.imageRepository.repositoryName,
+//     ecsServices: mainStack.listeningServices,
+//     artifactBucket: externalResources.artifactBucket
+// });
 
 const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     env: {
@@ -107,4 +108,4 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
 
 dockerPipeline.addDependency(cdkPipeline);
 mainStack.addDependency(cdkPipeline);
-ecsPipeline.addDependency(cdkPipeline);
+// ecsPipeline.addDependency(cdkPipeline);

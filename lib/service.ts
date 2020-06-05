@@ -4,7 +4,11 @@ import * as ecr from '@aws-cdk/aws-ecr';
 import * as ecs from '@aws-cdk/aws-ecs';
 import * as iam from '@aws-cdk/aws-iam';
 import * as logs from '@aws-cdk/aws-logs';
+import * as s3 from '@aws-cdk/aws-s3';
 import * as sqs from '@aws-cdk/aws-sqs';
+
+import { EcsStack } from './cicd';
+import { S3ArtifactsProps } from '@aws-cdk/aws-codebuild';
 
 const DEFAULT_ECR_TAG: string = 'latest';
 
@@ -71,13 +75,14 @@ export interface ServiceProps {
 }
 
 interface MainStackProps extends cdk.StackProps {
+    artifactBucket: s3.IBucket;
     mappings: Map<string, ServiceProps>;
     repository: ecr.Repository;
     vpc: ec2.IVpc;
 }
 
 export class MainStack extends cdk.Stack {
-    public readonly listeningServices: Map<string, ecs.BaseService>;
+    // public readonly listeningServices: Map<string, ecs.BaseService>;
 
     constructor(scope: cdk.Construct, id: string, props: MainStackProps) {
         super(scope, id, props);
@@ -110,6 +115,12 @@ export class MainStack extends cdk.Stack {
             }
         }
 
-        this.listeningServices = listeningServices;
+        const ecsPipeline = new EcsStack(this, 'DeployPipeline', {
+            imageRepositoryName: props.repository.repositoryName,
+            ecsServices: listeningServices,
+            artifactBucket: props.artifactBucket
+        });
+
+        // this.listeningServices = listeningServices;
     }
 }

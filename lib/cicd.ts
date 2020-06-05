@@ -118,14 +118,14 @@ export class DockerStack extends cdk.Stack {
     }
 }
 
-interface EcsStackProps extends cdk.StackProps {
+interface EcsStackProps extends cdk.NestedStackProps {
     artifactBucket: s3.IBucket;
     ecsServices: Map<string, ecs.FargateService>;
     imageRepositoryName: string;
     tag?: string;
 }
 
-export class EcsStack extends cdk.Stack {
+export class EcsStack extends cdk.NestedStack {
     constructor(scope: cdk.Construct, id: string, props: EcsStackProps) {
         super(scope, id, props);
 
@@ -430,18 +430,18 @@ export class CdkStack extends cdk.Stack {
             runOrder: 1
         });
 
-        const ecsDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
-            actionName: 'DeployPipeline',
-            capabilities: [
-                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
-            ],
-            // deploymentRole: props.pipelineDeploymentRole,
-            templatePath: cdkOutput.atPath('DeployPipeline.template.json'),
-            templateConfiguration: configOutput.atPath('templateConfiguration.json'),
-            stackName: 'DeployPipeline',
-            adminPermissions: false,
-            runOrder: 3
-        });
+        // const ecsDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+        //     actionName: 'DeployPipeline',
+        //     capabilities: [
+        //         cfn.CloudFormationCapabilities.ANONYMOUS_IAM
+        //     ],
+        //     // deploymentRole: props.pipelineDeploymentRole,
+        //     templatePath: cdkOutput.atPath('DeployPipeline.template.json'),
+        //     templateConfiguration: configOutput.atPath('templateConfiguration.json'),
+        //     stackName: 'DeployPipeline',
+        //     adminPermissions: false,
+        //     runOrder: 3
+        // });
 
         const mainDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
             actionName: 'Deploy',
@@ -496,7 +496,7 @@ export class CdkStack extends cdk.Stack {
                     actions: [
                         dockerDeployment,
                         mainDeployment,
-                        ecsDeployment
+                        // ecsDeployment
                     ]
                 }
             ]
@@ -511,13 +511,13 @@ export class CdkStack extends cdk.Stack {
         dockerDeployment.addToDeploymentRolePolicy(secretsPermissions);
         dockerDeployment.addToDeploymentRolePolicy(tagPermissions);
 
-        ecsDeployment.addToDeploymentRolePolicy(codebuildPermissions);
-        ecsDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
-        ecsDeployment.addToDeploymentRolePolicy(eventsPermissions);
-        ecsDeployment.addToDeploymentRolePolicy(iamPermissions);
-        ecsDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
-        ecsDeployment.addToDeploymentRolePolicy(iamRolePermissions);
-        ecsDeployment.addToDeploymentRolePolicy(tagPermissions);
+        // ecsDeployment.addToDeploymentRolePolicy(codebuildPermissions);
+        // ecsDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
+        // ecsDeployment.addToDeploymentRolePolicy(eventsPermissions);
+        // ecsDeployment.addToDeploymentRolePolicy(iamPermissions);
+        // ecsDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
+        // ecsDeployment.addToDeploymentRolePolicy(iamRolePermissions);
+        // ecsDeployment.addToDeploymentRolePolicy(tagPermissions);
 
         mainDeployment.addToDeploymentRolePolicy(ec2Permissions);
         mainDeployment.addToDeploymentRolePolicy(ecsClusterPermissions);

@@ -20,7 +20,7 @@ deploy-ecr:
 	$(call deploy,DockerPipeline)
 
 deploy-ecs:
-	$(call deploy,DeployPipeline)
+	$(call deploy,MainStack)
 
 deploy-cdk:
 	$(call deploy,CdkPipeline)
@@ -29,7 +29,7 @@ delete-ecr:
 	$(call delete,DockerPipeline)
 
 delete-ecs:
-	$(call delete,DeployPipeline)
+	$(call delete,MainStack)
 
 delete-cdk:
 	$(call delete,CdkPipeline)
