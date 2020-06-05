@@ -345,7 +345,8 @@ export class CdkStack extends cdk.Stack {
         const region = cdk.Stack.of(this).region;
 
         const sourceOutput = new codepipeline.Artifact();
-        const buildOutput = new codepipeline.Artifact();
+        const cdkOutput = new codepipeline.Artifact('cdkOutput');
+        const configOutput = new codepipeline.Artifact('configOutput');
 
         const buildProject = new codebuild.PipelineProject(this, 'BuildProject', {
             buildSpec: codebuild.BuildSpec.fromSourceFilename('buildspec.yml'),
@@ -364,10 +365,11 @@ export class CdkStack extends cdk.Stack {
         const codebuildPermissions = new iam.PolicyStatement();
         codebuildPermissions.addAllResources();
         codebuildPermissions.addActions(
+            'codebuild:BatchGetProjects',
             'codebuild:CreateProject',
             'codebuild:DeleteProject',
+            'codebuild:StartBuild',
             'codebuild:UpdateProject',
-            'codebuild:BatchGetProjects'
         );
 
         const codepipelinePermissions = new iam.PolicyStatement();
@@ -484,6 +486,11 @@ export class CdkStack extends cdk.Stack {
         const tagPermissions = new iam.PolicyStatement();
         tagPermissions.addAllResources();
         tagPermissions.addActions(
+            'codepipeline:TagResource',
+            'ec2:CreateTags',
+            'ecr:TagResource',
+            'iam:TagRole',
+            'sqs:TagQueue',
             'tag:TagResources',
             'tag:UntagResources',
         );
@@ -493,7 +500,8 @@ export class CdkStack extends cdk.Stack {
             inlinePolicies: {
                 'self-destruct': new iam.PolicyDocument({
                     statements: [
-                        iamRolePermissions
+                        iamRolePermissions,
+                        iamPolicyPermissions
                     ]
                 })
             }
@@ -516,7 +524,8 @@ export class CdkStack extends cdk.Stack {
                 cfn.CloudFormationCapabilities.ANONYMOUS_IAM
             ],
             deploymentRole: selfDeploymentRole,
-            templatePath: buildOutput.atPath('CdkPipeline.template.json'),
+            templatePath: cdkOutput.atPath('CdkPipeline.template.json'),
+            templateConfiguration: configOutput.atPath('templateConfiguration.json'),
             stackName: 'CdkPipeline',
             adminPermissions: false,
             runOrder: 1
@@ -528,7 +537,8 @@ export class CdkStack extends cdk.Stack {
                 cfn.CloudFormationCapabilities.ANONYMOUS_IAM
             ],
             // deploymentRole: props.pipelineDeploymentRole,
-            templatePath: buildOutput.atPath('DockerPipeline.template.json'),
+            templatePath: cdkOutput.atPath('DockerPipeline.template.json'),
+            templateConfiguration: configOutput.atPath('templateConfiguration.json'),
             stackName: 'DockerPipeline',
             adminPermissions: false,
             runOrder: 1
@@ -540,7 +550,8 @@ export class CdkStack extends cdk.Stack {
                 cfn.CloudFormationCapabilities.ANONYMOUS_IAM
             ],
             // deploymentRole: props.pipelineDeploymentRole,
-            templatePath: buildOutput.atPath('DeployPipeline.template.json'),
+            templatePath: cdkOutput.atPath('DeployPipeline.template.json'),
+            templateConfiguration: configOutput.atPath('templateConfiguration.json'),
             stackName: 'DeployPipeline',
             adminPermissions: false,
             runOrder: 3
@@ -551,7 +562,8 @@ export class CdkStack extends cdk.Stack {
             capabilities: [
                 cfn.CloudFormationCapabilities.ANONYMOUS_IAM
             ],
-            templatePath: buildOutput.atPath('MainStack.template.json'),
+            templatePath: cdkOutput.atPath('MainStack.template.json'),
+            templateConfiguration: configOutput.atPath('templateConfiguration.json'),
             stackName: 'MainStack',
             adminPermissions: false,
             runOrder: 2
@@ -582,7 +594,7 @@ export class CdkStack extends cdk.Stack {
                             actionName: 'CloudFormationBuild',
                             project: buildProject,
                             input: sourceOutput,
-                            outputs: [buildOutput],
+                            outputs: [cdkOutput, configOutput],
                             type: codepipeline_actions.CodeBuildActionType.BUILD
                         })
                     ]

@@ -11,6 +11,11 @@ phases:
       - npm run build
       - npm run cdk synth -- -a bin/cicd-cdk.js -o $BUILD_DIR -c dockerRepository=aws-cicd-docker -c cdkRepository=aws-cicd-cdk -c owner=avanderm -c branch=master -c artifactBucket=antoine.test
 artifacts:
-  base-directory: $BUILD_DIR
-  files:
-    - "**/*"
+  secondary-artifacts:
+    cdkOutput:
+      base-directory: $BUILD_DIR
+      files:
+        - "**/*"
+    configOutput:
+      files:
+        - templateConfiguration.json
