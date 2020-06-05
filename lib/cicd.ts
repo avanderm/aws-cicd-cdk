@@ -495,7 +495,7 @@ export class CdkStack extends cdk.Stack {
                     statements: [
                         iamRolePermissions
                     ]
-                });
+                })
             }
         });
 
