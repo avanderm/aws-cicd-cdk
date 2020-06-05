@@ -3,10 +3,12 @@ phases:
   install:
     runtime-versions:
       nodejs: 12
+      python: 3.7
     commands:
       - apt-get update
       - apt-get install -y jq moreutils
       - jq --version
+      - pip install --upgrade boto3
   pre_build:
     commands:
       - npm install
@@ -17,6 +19,9 @@ phases:
   post_build:
     commands:
       - cat templateConfiguration.json | jq --arg env $ENVIRONMENT '.Tags.Environment = $env' | sponge templateConfiguration.json
+      - jq -f scripts/extract_assets.jq $BUILD_DIR/manifest.json > assets.json
+      - python scripts/upload_assets.py
+      - jq -s '.[0] * .[1]' basicConfiguration.json mainConfiguration.json | sponge mainConfiguration.json
 artifacts:
   secondary-artifacts:
     cdkOutput:
@@ -25,4 +30,5 @@ artifacts:
         - "**/*"
     configOutput:
       files:
-        - templateConfiguration.json
+        - basicConfiguration.json
+        - mainConfiguration.json

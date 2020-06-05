@@ -1,0 +1,1 @@
+[.artifacts.MainStack.metadata."/MainStack"[] | select(.type == "aws:cdk:asset") | .data]

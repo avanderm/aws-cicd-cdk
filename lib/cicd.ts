@@ -238,6 +238,10 @@ export class CdkStack extends cdk.Stack {
                         value: 'build',
                         type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
                     },
+                    'ARTIFACT_BUCKET': {
+                        value: props.artifactBucket.bucketName,
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
                     'ENVIRONMENT': {
                         value: props.environment ? props.environment : 'production',
                         type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
@@ -370,11 +374,21 @@ export class CdkStack extends cdk.Stack {
         const tagPermissions = new iam.PolicyStatement();
         tagPermissions.addAllResources();
         tagPermissions.addActions(
+            'codepipeline:ListTagsForResource',
             'codepipeline:TagResource',
+            'codepipeline:UntagResource',
             'ec2:CreateTags',
+            'ec2:DeleteTags',
             'ecr:TagResource',
+            'ecr:ListTagsForResource',
+            'ecr:UntagResource',
+            'ecs:ListTagsForResource',
+            'ecs:TagResource',
+            'ecs:UntagResource',
             'iam:TagRole',
+            'iam:UntagRole',
             'sqs:TagQueue',
+            'sqs:UntagQueue',
             'tag:TagResources',
             'tag:UntagResources',
         );
@@ -411,7 +425,7 @@ export class CdkStack extends cdk.Stack {
             ],
             deploymentRole: selfDeploymentRole,
             templatePath: cdkOutput.atPath('CdkPipeline.template.json'),
-            templateConfiguration: configOutput.atPath('templateConfiguration.json'),
+            templateConfiguration: configOutput.atPath('basicConfiguration.json'),
             stackName: 'CdkPipeline',
             adminPermissions: false,
             runOrder: 1
@@ -424,7 +438,7 @@ export class CdkStack extends cdk.Stack {
             ],
             // deploymentRole: props.pipelineDeploymentRole,
             templatePath: cdkOutput.atPath('DockerPipeline.template.json'),
-            templateConfiguration: configOutput.atPath('templateConfiguration.json'),
+            templateConfiguration: configOutput.atPath('basicConfiguration.json'),
             stackName: 'DockerPipeline',
             adminPermissions: false,
             runOrder: 1
@@ -449,7 +463,7 @@ export class CdkStack extends cdk.Stack {
                 cfn.CloudFormationCapabilities.ANONYMOUS_IAM
             ],
             templatePath: cdkOutput.atPath('MainStack.template.json'),
-            templateConfiguration: configOutput.atPath('templateConfiguration.json'),
+            templateConfiguration: configOutput.atPath('mainConfiguration.json'),
             stackName: 'MainStack',
             adminPermissions: false,
             runOrder: 2
@@ -522,6 +536,9 @@ export class CdkStack extends cdk.Stack {
         mainDeployment.addToDeploymentRolePolicy(ec2Permissions);
         mainDeployment.addToDeploymentRolePolicy(ecsClusterPermissions);
         mainDeployment.addToDeploymentRolePolicy(ecsServicePermissions);
+        mainDeployment.addToDeploymentRolePolicy(codebuildPermissions);
+        mainDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
+        mainDeployment.addToDeploymentRolePolicy(eventsPermissions);
         mainDeployment.addToDeploymentRolePolicy(iamPermissions);
         mainDeployment.addToDeploymentRolePolicy(iamRolePermissions);
         mainDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
