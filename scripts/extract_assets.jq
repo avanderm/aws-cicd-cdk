@@ -1,1 +1,1 @@
-[.artifacts.MainStack.metadata."/MainStack"[] | select(.type == "aws:cdk:asset") | .data]
+[getpath(["artifacts", $stack, "metadata", "/\($stack)"])[] | select(.type == "aws:cdk:asset") | .data]
