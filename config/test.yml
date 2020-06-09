@@ -1,5 +1,6 @@
 processor1:
   ageRestriction: 28
+  version: latest
 
 processor2:
   ageRestriction: 31

@@ -1,0 +1,34 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      nodejs: 12
+      python: 3.7
+    commands:
+      - apt-get update
+      - apt-get install -y jq moreutils
+      - jq --version
+      - pip install --upgrade boto3
+  pre_build:
+    commands:
+      - npm install
+  build:
+    commands:
+      - npm run build
+      - npm run cdk synth -- -a bin/cicd-cdk.js -o $BUILD_DIR -c dockerRepository=aws-cicd-docker -c cdkRepository=aws-cicd-cdk -c owner=avanderm -c branch=master -c artifactBucket=antoine.test
+  post_build:
+    commands:
+      - cat templateConfiguration.json | jq --arg env $ENVIRONMENT '.Tags.Environment = $env' | sponge templateConfiguration.json
+      - jq -f scripts/extract_assets.jq --arg stack MainStack $BUILD_DIR/manifest.json > assets.json
+      - python scripts/upload_assets.py
+      - jq -s '.[0] * .[1]' basicConfiguration.json mainConfiguration.json | sponge mainConfiguration.json
+artifacts:
+  secondary-artifacts:
+    cdkOutput:
+      base-directory: $BUILD_DIR
+      files:
+        - "**/*"
+    configOutput:
+      files:
+        - basicConfiguration.json
+        - mainConfiguration.json
