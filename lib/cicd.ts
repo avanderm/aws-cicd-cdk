@@ -3,13 +3,17 @@ import * as cfn from '@aws-cdk/aws-cloudformation';
 import * as codebuild from '@aws-cdk/aws-codebuild';
 import * as codepipeline from '@aws-cdk/aws-codepipeline';
 import * as codepipeline_actions from '@aws-cdk/aws-codepipeline-actions';
+import * as ec2 from '@aws-cdk/aws-ec2';
 import * as ecr from '@aws-cdk/aws-ecr';
 import * as ecs from '@aws-cdk/aws-ecs';
 import * as iam from '@aws-cdk/aws-iam';
 import * as s3 from '@aws-cdk/aws-s3';
 
+import { getSubnetIds, getAvailabilityZones } from './utils';
+
 interface DockerStackProps extends cdk.StackProps {
     repository: string;
+    githubTokenParameter: string;
     owner: string;
     branch?: string;
     tag?: string;
@@ -80,7 +84,7 @@ export class DockerStack extends cdk.Stack {
                         new codepipeline_actions.GitHubSourceAction({
                             actionName: 'Source',
                             branch: props.branch ? props.branch : 'master',
-                            oauthToken: cdk.SecretValue.secretsManager('github/hp-antoine/token'),
+                            oauthToken: cdk.SecretValue.secretsManager(props.githubTokenParameter),
                             output: sourceOutput,
                             owner: props.owner,
                             repo: props.repository,
@@ -210,10 +214,13 @@ export class EcsStack extends cdk.NestedStack {
 }
 
 interface CdkStackProps extends cdk.StackProps {
-    repository: string;
+    cdkRepositoryName: string;
+    dockerRepositoryName: string;
+    githubTokenParameter: string;
     owner: string;
     branch?: string;
     artifactBucket: s3.IBucket;
+    vpc: ec2.IVpc;
     environment?: string;
 }
 
@@ -238,8 +245,36 @@ export class CdkStack extends cdk.Stack {
                         value: 'build',
                         type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
                     },
+                    'CDK_REPOSITORY': {
+                        value: props.cdkRepositoryName,
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
+                    'DOCKER_REPOSITORY': {
+                        value: props.dockerRepositoryName,
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
+                    'GITHUB_TOKEN': {
+                        value: props.githubTokenParameter,
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
+                    'GITHUB_OWNER': {
+                        value: props.owner,
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
                     'ARTIFACT_BUCKET': {
                         value: props.artifactBucket.bucketName,
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
+                    'VPC_ID': {
+                        value: props.vpc.vpcId,
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
+                    'SUBNET_IDS': {
+                        value: getSubnetIds(props.vpc).join(','),
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
+                    'AVAILABILITY_ZONES': {
+                        value: getAvailabilityZones(props.vpc).join(','),
                         type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
                     },
                     'ENVIRONMENT': {
@@ -412,8 +447,6 @@ export class CdkStack extends cdk.Stack {
         otherRoleResource.addDependsOn(roleResource);
 
         selfDeploymentRole.addToPolicy(iamPermissions);
-        // selfDeploymentRole.addToPolicy(iamPolicyPermissions);
-        // selfDeploymentRole.addToPolicy(iamRolePermissions);
         selfDeploymentRole.addToPolicy(codebuildPermissions);
         selfDeploymentRole.addToPolicy(codepipelinePermissions);
         selfDeploymentRole.addToPolicy(tagPermissions);
@@ -444,19 +477,6 @@ export class CdkStack extends cdk.Stack {
             runOrder: 1
         });
 
-        // const ecsDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
-        //     actionName: 'DeployPipeline',
-        //     capabilities: [
-        //         cfn.CloudFormationCapabilities.ANONYMOUS_IAM
-        //     ],
-        //     // deploymentRole: props.pipelineDeploymentRole,
-        //     templatePath: cdkOutput.atPath('DeployPipeline.template.json'),
-        //     templateConfiguration: configOutput.atPath('templateConfiguration.json'),
-        //     stackName: 'DeployPipeline',
-        //     adminPermissions: false,
-        //     runOrder: 3
-        // });
-
         const mainDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
             actionName: 'Deploy',
             capabilities: [
@@ -482,7 +502,7 @@ export class CdkStack extends cdk.Stack {
                             oauthToken: cdk.SecretValue.secretsManager('github/hp-antoine/token'),
                             output: sourceOutput,
                             owner: props.owner,
-                            repo: props.repository,
+                            repo: props.cdkRepositoryName,
                             trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
                         })
                     ]
@@ -524,14 +544,6 @@ export class CdkStack extends cdk.Stack {
         dockerDeployment.addToDeploymentRolePolicy(iamRolePermissions);
         dockerDeployment.addToDeploymentRolePolicy(secretsPermissions);
         dockerDeployment.addToDeploymentRolePolicy(tagPermissions);
-
-        // ecsDeployment.addToDeploymentRolePolicy(codebuildPermissions);
-        // ecsDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
-        // ecsDeployment.addToDeploymentRolePolicy(eventsPermissions);
-        // ecsDeployment.addToDeploymentRolePolicy(iamPermissions);
-        // ecsDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
-        // ecsDeployment.addToDeploymentRolePolicy(iamRolePermissions);
-        // ecsDeployment.addToDeploymentRolePolicy(tagPermissions);
 
         mainDeployment.addToDeploymentRolePolicy(ec2Permissions);
         mainDeployment.addToDeploymentRolePolicy(ecsClusterPermissions);

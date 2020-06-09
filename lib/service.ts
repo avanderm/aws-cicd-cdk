@@ -82,8 +82,6 @@ interface MainStackProps extends cdk.StackProps {
 }
 
 export class MainStack extends cdk.Stack {
-    // public readonly listeningServices: Map<string, ecs.BaseService>;
-
     constructor(scope: cdk.Construct, id: string, props: MainStackProps) {
         super(scope, id, props);
 
@@ -120,7 +118,5 @@ export class MainStack extends cdk.Stack {
             ecsServices: listeningServices,
             artifactBucket: props.artifactBucket
         });
-
-        // this.listeningServices = listeningServices;
     }
 }
