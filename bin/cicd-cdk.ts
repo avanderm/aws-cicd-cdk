@@ -14,7 +14,10 @@ const region = process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION;
 
 const app = new cdk.App();
 
-const artifactBucket = app.node.tryGetContext('artifactBucket') || `artifacts-${account}-${region}`
+const artifactBucket = app.node.tryGetContext('artifactBucket') || `artifacts-${account}-${region}`;
+const dockerRepository = app.node.tryGetContext('dockerRepository') || 'aws-cicd-docker';
+const cdkRepository = app.node.tryGetContext('cdkRepository') || 'aws-cicd-cdk';
+const githubOwner = app.node.tryGetContext('owner') || 'avanderm';
 
 // already existing resources
 const externalResources = new external.ExternalResources(app, 'ExternalResources', {
@@ -24,8 +27,8 @@ const externalResources = new external.ExternalResources(app, 'ExternalResources
     },
     artifactBucket: artifactBucket,
     vpc: app.node.tryGetContext('vpc'),
-    subnets: app.node.tryGetContext('subnets').split(','),
-    availabilityZones: app.node.tryGetContext('availabilityZones').split(',')
+    subnets: app.node.tryGetContext('subnets')?.split(','),
+    availabilityZones: app.node.tryGetContext('availabilityZones')?.split(',')
 });
 
 const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
@@ -41,9 +44,9 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
         Environment: environment,
         Project: 'CICD'
     },
-    repository: app.node.tryGetContext('dockerRepository'),
-    githubTokenParameter: app.node.tryGetContext('githubTokenParameter'),
-    owner: app.node.tryGetContext('owner'),
+    repository: dockerRepository,
+    githubTokenParameter: app.node.tryGetContext('githubTokenParameter') || 'dud',
+    owner: githubOwner,
     artifactBucket: externalResources.artifactBucket
 });
 
@@ -85,10 +88,10 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
         Environment: environment,
         Project: 'CICD'
     },
-    cdkRepositoryName: app.node.tryGetContext('cdkRepository'),
-    dockerRepositoryName: app.node.tryGetContext('dockerRepository'),
-    githubTokenParameter: app.node.tryGetContext('githubTokenParameter'),
-    owner: app.node.tryGetContext('owner'),
+    dockerRepositoryName: dockerRepository,
+    cdkRepositoryName: cdkRepository,
+    githubTokenParameter: app.node.tryGetContext('githubTokenParameter') || 'dud',
+    owner: githubOwner,
     branch: 'parametrization',
     artifactBucket: externalResources.artifactBucket,
     vpc: externalResources.vpc,
