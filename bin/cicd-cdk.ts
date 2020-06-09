@@ -18,6 +18,7 @@ const artifactBucket = app.node.tryGetContext('artifactBucket') || `artifacts-${
 const dockerRepository = app.node.tryGetContext('dockerRepository') || 'aws-cicd-docker';
 const cdkRepository = app.node.tryGetContext('cdkRepository') || 'aws-cicd-cdk';
 const githubOwner = app.node.tryGetContext('owner') || 'avanderm';
+const githubTokenParameter = app.node.tryGetContext('githubTokenParameter') || 'dud';
 
 // already existing resources
 const externalResources = new external.ExternalResources(app, 'ExternalResources', {
@@ -45,7 +46,7 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
         Project: 'CICD'
     },
     repository: dockerRepository,
-    githubTokenParameter: app.node.tryGetContext('githubTokenParameter') || 'dud',
+    githubTokenParameter: githubTokenParameter,
     owner: githubOwner,
     artifactBucket: externalResources.artifactBucket
 });
@@ -90,7 +91,7 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     },
     dockerRepositoryName: dockerRepository,
     cdkRepositoryName: cdkRepository,
-    githubTokenParameter: app.node.tryGetContext('githubTokenParameter') || 'dud',
+    githubTokenParameter: githubTokenParameter,
     owner: githubOwner,
     branch: 'parametrization',
     artifactBucket: externalResources.artifactBucket,
