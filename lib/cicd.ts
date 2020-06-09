@@ -257,6 +257,10 @@ export class CdkStack extends cdk.Stack {
                         value: props.githubTokenParameter,
                         type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
                     },
+                    'GITHUB_OWNER': {
+                        value: props.owner,
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
                     'ARTIFACT_BUCKET': {
                         value: props.artifactBucket.bucketName,
                         type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
