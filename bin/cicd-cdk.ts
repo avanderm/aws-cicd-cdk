@@ -22,7 +22,10 @@ const externalResources = new external.ExternalResources(app, 'ExternalResources
         account: account,
         region: region
     },
-    artifactBucket: artifactBucket
+    artifactBucket: artifactBucket,
+    vpc: app.node.tryGetContext('vpc'),
+    subnets: app.node.tryGetContext('subnets').split(','),
+    availabilityZones: app.node.tryGetContext('availabilityZones').split(',')
 });
 
 const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
@@ -68,24 +71,6 @@ const mainStack = new service.MainStack(app, 'MainStack', {
     vpc: externalResources.vpc
 });
 
-// const ecsPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
-//     env: {
-//         account: account,
-//         region: region
-//     },
-//     tags: {
-//         Pillar: 'hs',
-//         Domain: 'hp',
-//         Team: 'hp',
-//         Owner: 'antoine',
-//         Environment: environment,
-//         Project: 'CICD'
-//     },
-//     imageRepositoryName: dockerPipeline.imageRepository.repositoryName,
-//     ecsServices: mainStack.listeningServices,
-//     artifactBucket: externalResources.artifactBucket
-// });
-
 const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     env: {
         account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
@@ -99,13 +84,14 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
         Environment: environment,
         Project: 'CICD'
     },
-    repository: app.node.tryGetContext('cdkRepository'),
+    cdkRepositoryName: app.node.tryGetContext('cdkRepository'),
+    dockerRepositoryName: app.node.tryGetContext('dockerRepository'),
     owner: app.node.tryGetContext('owner'),
-    branch: 'cdk-pipeline',
+    branch: 'parametrization',
     artifactBucket: externalResources.artifactBucket,
+    vpc: externalResources.vpc,
     environment: environment
 });
 
 dockerPipeline.addDependency(cdkPipeline);
 mainStack.addDependency(cdkPipeline);
-// ecsPipeline.addDependency(cdkPipeline);

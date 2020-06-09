@@ -4,6 +4,9 @@ import * as s3 from '@aws-cdk/aws-s3';
 
 interface SharedStackProps extends cdk.StackProps {
     artifactBucket: string;
+    vpc: string;
+    availabilityZones: Array<string>;
+    subnets: Array<string>;
 }
 
 export class ExternalResources extends cdk.Stack {
@@ -13,7 +16,7 @@ export class ExternalResources extends cdk.Stack {
     constructor(scope: cdk.Construct, id: string, props: SharedStackProps) {
         super(scope, id, props);
 
-        const artifactBucket = s3.Bucket.fromBucketName(this, 'ArtifactBucket;=', props.artifactBucket);
+        const artifactBucket = s3.Bucket.fromBucketName(this, 'ArtifactBucket', props.artifactBucket);
 
         const vpc = ec2.Vpc.fromVpcAttributes(this, 'VPC', {
             vpcId: 'vpc-c8bfc0ad',
