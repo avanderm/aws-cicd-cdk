@@ -13,6 +13,7 @@ import { getSubnetIds, getAvailabilityZones } from './utils';
 
 interface DockerStackProps extends cdk.StackProps {
     repository: string;
+    githubTokenParameter: string;
     owner: string;
     branch?: string;
     tag?: string;
@@ -83,7 +84,7 @@ export class DockerStack extends cdk.Stack {
                         new codepipeline_actions.GitHubSourceAction({
                             actionName: 'Source',
                             branch: props.branch ? props.branch : 'master',
-                            oauthToken: cdk.SecretValue.secretsManager('github/hp-antoine/token'),
+                            oauthToken: cdk.SecretValue.secretsManager(props.githubTokenParameter),
                             output: sourceOutput,
                             owner: props.owner,
                             repo: props.repository,
@@ -215,6 +216,7 @@ export class EcsStack extends cdk.NestedStack {
 interface CdkStackProps extends cdk.StackProps {
     cdkRepositoryName: string;
     dockerRepositoryName: string;
+    githubTokenParameter: string;
     owner: string;
     branch?: string;
     artifactBucket: s3.IBucket;
@@ -249,6 +251,10 @@ export class CdkStack extends cdk.Stack {
                     },
                     'DOCKER_REPOSITORY': {
                         value: props.dockerRepositoryName,
+                        type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
+                    },
+                    'GITHUB_TOKEN': {
+                        value: props.githubTokenParameter,
                         type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
                     },
                     'ARTIFACT_BUCKET': {

@@ -42,6 +42,7 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
         Project: 'CICD'
     },
     repository: app.node.tryGetContext('dockerRepository'),
+    githubTokenParameter: app.node.tryGetContext('githubTokenParameter'),
     owner: app.node.tryGetContext('owner'),
     artifactBucket: externalResources.artifactBucket
 });
@@ -86,6 +87,7 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     },
     cdkRepositoryName: app.node.tryGetContext('cdkRepository'),
     dockerRepositoryName: app.node.tryGetContext('dockerRepository'),
+    githubTokenParameter: app.node.tryGetContext('githubTokenParameter'),
     owner: app.node.tryGetContext('owner'),
     branch: 'parametrization',
     artifactBucket: externalResources.artifactBucket,

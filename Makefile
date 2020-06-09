@@ -3,6 +3,7 @@ deploy = npm run cdk deploy -- \
 	-o $(BUILD_DIR) \
 	-c dockerRepository=$(DOCKER_REPOSITORY) \
 	-c cdkRepository=$(CDK_REPOSITORY) \
+	-c githubTokenParameter=$(GITHUB_TOKEN) \
 	-c owner=$(OWNER) \
 	-c artifactBucket=$(ARTIFACT_BUCKET) \
 	-c vpc=$(VPC_ID) \
@@ -14,6 +15,7 @@ synth = npm run cdk synth -- \
 	-o $(BUILD_DIR) \
 	-c dockerRepository=$(DOCKER_REPOSITORY) \
 	-c cdkRepository=$(CDK_REPOSITORY) \
+	-c githubTokenParameter=$(GITHUB_TOKEN) \
 	-c owner=$(OWNER) \
 	-c artifactBucket=$(ARTIFACT_BUCKET) \
 	-c vpc=$(VPC_ID) \
