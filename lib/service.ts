@@ -6,9 +6,9 @@ import * as iam from '@aws-cdk/aws-iam';
 import * as logs from '@aws-cdk/aws-logs';
 import * as s3 from '@aws-cdk/aws-s3';
 import * as sqs from '@aws-cdk/aws-sqs';
+import { ICluster } from '@aws-cdk/aws-ecs';
 
-import { EcsStack } from './cicd';
-import { S3ArtifactsProps } from '@aws-cdk/aws-codebuild';
+// import { EcsStack } from './cicd';
 
 const DEFAULT_ECR_TAG: string = 'latest';
 
@@ -16,6 +16,7 @@ interface QueueServiceProps {
     ageRestriction: number;
     cluster: ecs.Cluster;
     logGroup: logs.LogGroup;
+    name: string;
     repository: ecr.Repository;
     tag: string;
 }
@@ -61,6 +62,7 @@ class QueueService extends cdk.Construct {
 
         const service = new ecs.FargateService(this, 'QueueService', {
             cluster: props.cluster,
+            serviceName: props.name,
             taskDefinition: taskDefinition,
             desiredCount: 1
         });
@@ -82,6 +84,9 @@ interface MainStackProps extends cdk.StackProps {
 }
 
 export class MainStack extends cdk.Stack {
+    public readonly serviceNames: Map<string, string>;
+    public readonly cluster: ICluster;
+
     constructor(scope: cdk.Construct, id: string, props: MainStackProps) {
         super(scope, id, props);
 
@@ -104,6 +109,7 @@ export class MainStack extends cdk.Stack {
                 ageRestriction: params.ageRestriction ? params.ageRestriction : 28,
                 cluster: cluster,
                 logGroup: logGroup,
+                name: name,
                 repository: props.repository,
                 tag: imageTag
             });
@@ -113,10 +119,18 @@ export class MainStack extends cdk.Stack {
             }
         }
 
-        const ecsPipeline = new EcsStack(this, 'DeployPipeline', {
-            imageRepositoryName: props.repository.repositoryName,
-            ecsServices: listeningServices,
-            artifactBucket: props.artifactBucket
-        });
+        let serviceNames = new Map<string, string>();
+        for (let [name, service] of listeningServices) {
+            serviceNames.set(name, service.serviceName);
+        }
+
+        this.serviceNames = serviceNames;
+        this.cluster = cluster;
+
+        // const ecsPipeline = new EcsStack(this, 'DeployPipeline', {
+        //     imageRepositoryName: props.repository.repositoryName,
+        //     ecsServices: listeningServices,
+        //     artifactBucket: props.artifactBucket
+        // });
     }
 }

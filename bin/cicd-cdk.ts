@@ -76,6 +76,25 @@ const mainStack = new service.MainStack(app, 'MainStack', {
     vpc: externalResources.vpc
 });
 
+const ecsPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
+    env: {
+        account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
+        region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION
+    },
+    tags: {
+        Pillar: 'hs',
+        Domain: 'hp',
+        Team: 'hp',
+        Owner: 'antoine',
+        Environment: environment,
+        Project: 'CICD'
+    },
+    imageRepositoryName: dockerPipeline.imageRepository.repositoryName,
+    ecsServices: mainStack.serviceNames,
+    cluster: mainStack.cluster,
+    artifactBucket: externalResources.artifactBucket
+});
+
 const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     env: {
         account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
