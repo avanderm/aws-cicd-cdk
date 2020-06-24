@@ -15,20 +15,4 @@ phases:
   build:
     commands:
       - npm run build
-      - make synth
-  post_build:
-    commands:
-      - cat templateConfiguration.json | jq --arg env $ENVIRONMENT '.Tags.Environment = $env' | sponge templateConfiguration.json
-      - jq -f scripts/extract_assets.jq --arg stack MainStack $BUILD_DIR/manifest.json > assets.json
-      - python scripts/upload_assets.py
-      - jq -s '.[0] * .[1]' basicConfiguration.json mainConfiguration.json | sponge mainConfiguration.json
-artifacts:
-  secondary-artifacts:
-    cdkOutput:
-      base-directory: $BUILD_DIR
-      files:
-        - "**/*"
-    configOutput:
-      files:
-        - basicConfiguration.json
-        - mainConfiguration.json
+      - make deploy-all

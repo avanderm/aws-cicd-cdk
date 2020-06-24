@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 import * as cdk from '@aws-cdk/core';
+import * as cloudwatch from '@aws-cdk/aws-cloudwatch';
+import * as ecs from '@aws-cdk/aws-ecs';
 import * as external from '../lib/external';
 import * as cicd from '../lib/cicd';
 import * as service from '../lib/service';
+import * as monitoring from '../lib/monitoring';
 import { camelCase } from '../lib/utils';
 
 import fs = require('fs');
@@ -51,13 +54,7 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
     artifactBucket: externalResources.artifactBucket
 });
 
-let serviceParameters = new Map<string, service.ServiceProps>();
-
-for (let [name, params] of Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8')))) {
-    serviceParameters.set(camelCase(name), <service.ServiceProps> params);
-}
-
-const mainStack = new service.MainStack(app, 'MainStack', {
+const mainStack = new service.BaseStack(app, 'BaseStack', {
     env: {
         account: account,
         region: region
@@ -71,15 +68,40 @@ const mainStack = new service.MainStack(app, 'MainStack', {
         Project: 'CICD'
     },
     artifactBucket: externalResources.artifactBucket,
-    mappings: serviceParameters,
-    repository: dockerPipeline.imageRepository,
     vpc: externalResources.vpc
 });
 
+let services = new Map<string, ecs.BaseService>();
+let metrics = new Array<cloudwatch.Metric>();
+
+for (let [name, params] of Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8')))) {
+    let serviceStack = new service.QueueServiceStack(app, `QueueService-${camelCase(name)}`, {
+        env: {
+            account: account,
+            region: region
+        },
+        tags: {
+            Pillar: 'hs',
+            Domain: 'hp',
+            Team: 'hp',
+            Owner: 'antoine',
+            Environment: environment,
+            Project: 'CICD'
+        },
+        cluster: mainStack.cluster,
+        logGroup: mainStack.logGroup,
+        parameters: <service.ServiceProps> params,
+        repository: dockerPipeline.imageRepository
+    });
+
+    services.set(camelCase(name), serviceStack.service);
+    metrics.push(serviceStack.metric);
+}
+
 const ecsPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
     env: {
-        account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
-        region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION
+        account: account,
+        region: region
     },
     tags: {
         Pillar: 'hs',
@@ -90,15 +112,31 @@ const ecsPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
         Project: 'CICD'
     },
     imageRepositoryName: dockerPipeline.imageRepository.repositoryName,
-    ecsServices: mainStack.serviceNames,
+    ecsServices: services,
     cluster: mainStack.cluster,
     artifactBucket: externalResources.artifactBucket
 });
 
+new monitoring.DashboardStack(app, 'DashBoardStack', {
+    env: {
+        account: account,
+        region: region
+    },
+    tags: {
+        Pillar: 'hs',
+        Domain: 'hp',
+        Team: 'hp',
+        Owner: 'antoine',
+        Environment: environment,
+        Project: 'CICD'
+    },
+    metrics: metrics
+})
+
 const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     env: {
-        account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
-        region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION
+        account: account,
+        region: region
     },
     tags: {
         Pillar: 'hs',
@@ -118,5 +156,5 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     environment: environment
 });
 
-dockerPipeline.addDependency(cdkPipeline);
-mainStack.addDependency(cdkPipeline);
+// dockerPipeline.addDependency(cdkPipeline);
+// mainStack.addDependency(cdkPipeline);
