@@ -125,7 +125,6 @@ export class DockerStack extends cdk.Stack {
 
 interface EcsStackProps extends cdk.StackProps{
     artifactBucket: s3.IBucket;
-    cluster: ecs.ICluster;
     ecsServices: Map<string, ecs.BaseService>;
     imageRepositoryName: string;
     tag?: string;
@@ -236,6 +235,29 @@ export class CdkStack extends cdk.Stack {
         const sourceOutput = new codepipeline.Artifact();
         const cdkOutput = new codepipeline.Artifact('cdkOutput');
         const configOutput = new codepipeline.Artifact('configOutput');
+
+        const cloudformationPermissions = new iam.PolicyStatement();
+        cloudformationPermissions.addAllResources();
+        cloudformationPermissions.addActions(
+            'cloudformation:CreateStack',
+            'cloudformation:CreateChangeSet',
+            'cloudformation:DeleteStack',
+            'cloudformation:DeleteChangeSet',
+            'cloudformation:DescribeStacks',
+            'cloudformation:DescribeStackEvents',
+            'cloudformation:DescribeChangeSet',
+            'cloudformation:ExecuteChangeSet',
+            'cloudformation:GetTemplate',
+            'cloudformation:UpdateStack',
+        );
+
+        const cloudwatchPermissions = new iam.PolicyStatement();
+        cloudwatchPermissions.addAllResources();
+        cloudwatchPermissions.addActions(
+            'cloudwatch:GetDashboard',
+            'cloudwatch:PutDashboard',
+            'cloudwatch:DeleteDashboards',
+        );
 
         const codebuildPermissions = new iam.PolicyStatement();
         codebuildPermissions.addAllResources();
@@ -395,6 +417,8 @@ export class CdkStack extends cdk.Stack {
             }
         });
 
+        buildProjectRole.addToPolicy(cloudformationPermissions);
+        buildProjectRole.addToPolicy(cloudwatchPermissions);
         buildProjectRole.addToPolicy(codebuildPermissions);
         buildProjectRole.addToPolicy(codepipelinePermissions);
         buildProjectRole.addToPolicy(ec2Permissions);
@@ -457,12 +481,9 @@ export class CdkStack extends cdk.Stack {
                         type: codebuild.BuildEnvironmentVariableType.PLAINTEXT
                     },
                 }
-            }
+            },
+            role: buildProjectRole
         });
-
-        // const roleResource = selfDeploymentRole.node.findChild('Resource') as cdk.CfnResource;
-        // const otherRoleResource = buildProject.role?.node.findChild('Resource') as cdk.CfnResource;
-        // otherRoleResource.addDependsOn(roleResource);
 
         new codepipeline.Pipeline(this, 'Pipeline', {
             artifactBucket: props.artifactBucket,
@@ -493,21 +514,7 @@ export class CdkStack extends cdk.Stack {
                             type: codepipeline_actions.CodeBuildActionType.BUILD
                         })
                     ]
-                },
-                // {
-                //     stageName: 'Update',
-                //     actions: [
-                //         selfDeployment,
-                //     ]
-                // },
-                // {
-                //     stageName: 'Deploy',
-                //     actions: [
-                //         dockerDeployment,
-                //         mainDeployment,
-                //         ecsDeployment
-                //     ]
-                // }
+                }
             ]
         });
     }

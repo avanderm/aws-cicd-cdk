@@ -6,9 +6,6 @@ phases:
       python: 3.7
     commands:
       - apt-get update
-      - apt-get install -y jq moreutils
-      - jq --version
-      - pip install --upgrade boto3
   pre_build:
     commands:
       - npm install

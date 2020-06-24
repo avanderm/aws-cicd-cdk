@@ -41,4 +41,4 @@ delete:
 	$(call delete,$(STACK))
 
 delete-all:
-	$(call delete,"*)
+	$(call delete,"*")

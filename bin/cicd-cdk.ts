@@ -41,9 +41,6 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
         region: region
     },
     tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
@@ -54,15 +51,12 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
     artifactBucket: externalResources.artifactBucket
 });
 
-const mainStack = new service.BaseStack(app, 'BaseStack', {
+const baseStack = new service.BaseStack(app, 'BaseStack', {
     env: {
         account: account,
         region: region
     },
     tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
@@ -73,28 +67,32 @@ const mainStack = new service.BaseStack(app, 'BaseStack', {
 
 let services = new Map<string, ecs.BaseService>();
 let metrics = new Array<cloudwatch.Metric>();
+let freeze = new Array<service.QueueServiceStack>();
 
 for (let [name, params] of Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8')))) {
+    let serviceParameters = <service.ServiceProps> params;
+
     let serviceStack = new service.QueueServiceStack(app, `QueueService-${camelCase(name)}`, {
         env: {
             account: account,
             region: region
         },
         tags: {
-            Pillar: 'hs',
-            Domain: 'hp',
-            Team: 'hp',
             Owner: 'antoine',
             Environment: environment,
             Project: 'CICD'
         },
-        cluster: mainStack.cluster,
-        logGroup: mainStack.logGroup,
-        parameters: <service.ServiceProps> params,
+        cluster: baseStack.cluster,
+        logGroup: baseStack.logGroup,
+        parameters: serviceParameters,
         repository: dockerPipeline.imageRepository
     });
 
-    services.set(camelCase(name), serviceStack.service);
+    if (!serviceParameters.version || serviceParameters.version === 'latest')
+        services.set(camelCase(name), serviceStack.service);
+    else
+        freeze.push(serviceStack);
+
     metrics.push(serviceStack.metric);
 }
 
@@ -104,18 +102,19 @@ const ecsPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
         region: region
     },
     tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
     },
     imageRepositoryName: dockerPipeline.imageRepository.repositoryName,
     ecsServices: services,
-    cluster: mainStack.cluster,
     artifactBucket: externalResources.artifactBucket
 });
+
+// frozen service stacks will remove their outputs, so first remove any imports
+for (let stack of freeze) {
+    stack.addDependency(ecsPipeline);
+}
 
 new monitoring.DashboardStack(app, 'DashBoardStack', {
     env: {
@@ -123,9 +122,6 @@ new monitoring.DashboardStack(app, 'DashBoardStack', {
         region: region
     },
     tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
@@ -139,9 +135,6 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
         region: region
     },
     tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
@@ -150,11 +143,11 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     cdkRepositoryName: cdkRepository,
     githubTokenParameter: githubTokenParameter,
     owner: githubOwner,
-    branch: 'codebuild-exclusive',
+    branch: 'codebuild-approach',
     artifactBucket: externalResources.artifactBucket,
     vpc: externalResources.vpc,
     environment: environment
 });
 
-// dockerPipeline.addDependency(cdkPipeline);
-// mainStack.addDependency(cdkPipeline);
+dockerPipeline.addDependency(cdkPipeline);
+baseStack.addDependency(cdkPipeline);
