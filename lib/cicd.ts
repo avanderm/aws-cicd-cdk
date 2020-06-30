@@ -285,6 +285,14 @@ export class CdkStack extends cdk.Stack {
             }
         });
 
+        const cloudwatchPermissions = new iam.PolicyStatement();
+        cloudwatchPermissions.addAllResources();
+        cloudwatchPermissions.addActions(
+            'cloudwatch:GetDashboard',
+            'cloudwatch:PutDashboard',
+            'cloudwatch:DeleteDashboards',
+        );
+
         const codebuildPermissions = new iam.PolicyStatement();
         codebuildPermissions.addAllResources();
         codebuildPermissions.addActions(
@@ -548,6 +556,7 @@ export class CdkStack extends cdk.Stack {
         mainDeployment.addToDeploymentRolePolicy(ec2Permissions);
         mainDeployment.addToDeploymentRolePolicy(ecsClusterPermissions);
         mainDeployment.addToDeploymentRolePolicy(ecsServicePermissions);
+        mainDeployment.addToDeploymentRolePolicy(cloudwatchPermissions);
         mainDeployment.addToDeploymentRolePolicy(codebuildPermissions);
         mainDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
         mainDeployment.addToDeploymentRolePolicy(eventsPermissions);
