@@ -93,7 +93,7 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     cdkRepositoryName: cdkRepository,
     githubTokenParameter: githubTokenParameter,
     owner: githubOwner,
-    branch: 'parametrization',
+    branch: 'master',
     artifactBucket: externalResources.artifactBucket,
     vpc: externalResources.vpc,
     environment: environment
