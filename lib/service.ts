@@ -1,4 +1,5 @@
 import * as cdk from '@aws-cdk/core';
+import * as cloudwatch from '@aws-cdk/aws-cloudwatch';
 import * as ec2 from '@aws-cdk/aws-ec2';
 import * as ecr from '@aws-cdk/aws-ecr';
 import * as ecs from '@aws-cdk/aws-ecs';
@@ -8,7 +9,7 @@ import * as s3 from '@aws-cdk/aws-s3';
 import * as sqs from '@aws-cdk/aws-sqs';
 
 import { EcsStack } from './cicd';
-import { S3ArtifactsProps } from '@aws-cdk/aws-codebuild';
+import { DashboardStack } from './monitoring';
 
 const DEFAULT_ECR_TAG: string = 'latest';
 
@@ -22,11 +23,13 @@ interface QueueServiceProps {
 
 class QueueService extends cdk.Construct {
     public readonly service: ecs.FargateService;
+    public readonly metric: cloudwatch.Metric;
 
     constructor(scope: cdk.Construct, id: string, props: QueueServiceProps) {
         super(scope, id);
 
         const queue = new sqs.Queue(this, 'Queue');
+        this.metric = queue.metric('ApproximateNumberOfMessagesAvailable');
 
         const taskRole = new iam.Role(this, 'TaskRole', {
             assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com')
@@ -96,6 +99,7 @@ export class MainStack extends cdk.Stack {
         });
 
         let listeningServices = new Map<string, ecs.BaseService>();
+        let metrics = new Array<cloudwatch.Metric>();
 
         for (let [name, params] of props.mappings) {
             let imageTag = params.version ? params.version : DEFAULT_ECR_TAG;
@@ -111,12 +115,18 @@ export class MainStack extends cdk.Stack {
             if (imageTag === DEFAULT_ECR_TAG) {
                 listeningServices.set(name, serviceConstruct.service);
             }
+
+            metrics.push(serviceConstruct.metric);
         }
 
-        const ecsPipeline = new EcsStack(this, 'DeployPipeline', {
+        new EcsStack(this, 'DeployPipeline', {
             imageRepositoryName: props.repository.repositoryName,
             ecsServices: listeningServices,
             artifactBucket: props.artifactBucket
+        });
+
+        new DashboardStack(this, 'DashboardStack', {
+            metrics: metrics
         });
     }
 }
