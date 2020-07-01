@@ -38,9 +38,6 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
         region: region
     },
     tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
@@ -63,9 +60,6 @@ const mainStack = new service.MainStack(app, 'MainStack', {
         region: region
     },
     tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
@@ -82,9 +76,6 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
         region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION
     },
     tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
