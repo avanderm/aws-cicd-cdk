@@ -1,11 +1,11 @@
 import * as cdk from '@aws-cdk/core';
 import * as cloudwatch from '@aws-cdk/aws-cloudwatch';
 
-interface DashboardStackProps extends cdk.NestedStackProps {
+interface DashboardStackProps extends cdk.StackProps{
     metrics: Array<cloudwatch.Metric>;
 }
 
-export class DashboardStack extends cdk.NestedStack {
+export class DashboardStack extends cdk.Stack {
     constructor(scope: cdk.Construct, id: string, props: DashboardStackProps) {
         super(scope, id, props);
 

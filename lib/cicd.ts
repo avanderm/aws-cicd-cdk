@@ -487,11 +487,11 @@ export class CdkStack extends cdk.Stack {
         });
 
         const baseDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
-            actionName: 'Deploy',
+            actionName: 'BaseStack',
             capabilities: [
                 cfn.CloudFormationCapabilities.ANONYMOUS_IAM
             ],
-            templatePath: cdkOutput.atPath('MainStack.template.json'),
+            templatePath: cdkOutput.atPath('BaseStack.template.json'),
             templateConfiguration: configOutput.atPath('basicConfiguration.json'),
             stackName: 'BaseStack',
             adminPermissions: false,
@@ -540,7 +540,7 @@ export class CdkStack extends cdk.Stack {
             templateConfiguration: configOutput.atPath('basicConfiguration.json'),
             stackName: 'DashboardStack',
             adminPermissions: false,
-            runOrder: 4
+            runOrder: 6
         });
 
         new codepipeline.Pipeline(this, 'Pipeline', {
@@ -601,7 +601,6 @@ export class CdkStack extends cdk.Stack {
         dockerDeployment.addToDeploymentRolePolicy(secretsPermissions);
         dockerDeployment.addToDeploymentRolePolicy(tagPermissions);
 
-        baseDeployment.addToDeploymentRolePolicy(ec2Permissions);
         baseDeployment.addToDeploymentRolePolicy(ecsClusterPermissions);
         baseDeployment.addToDeploymentRolePolicy(cloudwatchPermissions);
         baseDeployment.addToDeploymentRolePolicy(codebuildPermissions);
@@ -620,10 +619,24 @@ export class CdkStack extends cdk.Stack {
         selfDeployment.addToDeploymentRolePolicy(secretsPermissions);
         selfDeployment.addToDeploymentRolePolicy(tagPermissions);
 
+        serviceStackDeploymentRole.addToPolicy(ec2Permissions);
         serviceStackDeploymentRole.addToPolicy(ecsServicePermissions);
+        serviceStackDeploymentRole.addToPolicy(iamPermissions);
         serviceStackDeploymentRole.addToPolicy(iamRolePermissions);
         serviceStackDeploymentRole.addToPolicy(iamPolicyPermissions);
         serviceStackDeploymentRole.addToPolicy(sqsPermissions);
         serviceStackDeploymentRole.addToPolicy(tagPermissions);
+
+        ecsDeployment.addToDeploymentRolePolicy(codebuildPermissions);
+        ecsDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
+        ecsDeployment.addToDeploymentRolePolicy(eventsPermissions);
+        ecsDeployment.addToDeploymentRolePolicy(iamPermissions);
+        ecsDeployment.addToDeploymentRolePolicy(iamRolePermissions);
+        ecsDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
+        ecsDeployment.addToDeploymentRolePolicy(tagPermissions);
+
+        dashboardDeployment.addToDeploymentRolePolicy(cloudwatchPermissions);
+        dashboardDeployment.addToDeploymentRolePolicy(iamPermissions);
+        dashboardDeployment.addToDeploymentRolePolicy(tagPermissions);
     }
 }

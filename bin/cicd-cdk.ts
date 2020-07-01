@@ -41,9 +41,6 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
         region: region
     },
     tags: {
-        Pillar: 'hs',
-        Dobase: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
@@ -60,9 +57,6 @@ const baseStack = new service.BaseStack(app, 'BaseStack', {
         region: region
     },
     tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
@@ -84,9 +78,6 @@ for (let [name, params] of Object.entries(yaml.parse(fs.readFileSync(`./config/$
             region: region
         },
         tags: {
-            Pillar: 'hs',
-            Domain: 'hp',
-            Team: 'hp',
             Owner: 'antoine',
             Environment: environment,
             Project: 'CICD'
@@ -108,9 +99,6 @@ const ecsPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
         region: region
     },
     tags: {
-        Pillar: 'hs',
-        Domain: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
@@ -125,15 +113,25 @@ for (let stack of serviceStacks) {
     if (!stack.useLatest) stack.addDependency(ecsPipeline);
 }
 
+new monitoring.DashboardStack(app, 'DashboardStack', {
+    env: {
+        account: account,
+        region: region
+    },
+    tags: {
+        Owner: 'antoine',
+        Environment: environment,
+        Project: 'CICD'
+    },
+    metrics: serviceMetrics
+});
+
 const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     env: {
         account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
         region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION
     },
     tags: {
-        Pillar: 'hs',
-        Dobase: 'hp',
-        Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
         Project: 'CICD'
