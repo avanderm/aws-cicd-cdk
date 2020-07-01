@@ -77,15 +77,47 @@ export interface ServiceProps {
     version?: string;
 }
 
-interface MainStackProps extends cdk.StackProps {
-    artifactBucket: s3.IBucket;
-    mappings: Map<string, ServiceProps>;
+interface QueueServiceStackProps extends cdk.StackProps {
+    cluster: ecs.Cluster;
+    logGroup: logs.LogGroup;
+    parameters: ServiceProps;
     repository: ecr.Repository;
+}
+
+export class QueueServiceStack extends cdk.Stack {
+    public readonly service: ecs.BaseService;
+    public readonly metric: cloudwatch.Metric;
+    public readonly useLatest: boolean;
+
+    constructor(scope: cdk.Construct, id: string, props: QueueServiceStackProps) {
+        super(scope, id, props);
+
+        let imageTag = props.parameters.version ? props.parameters.version : DEFAULT_ECR_TAG;
+
+        let serviceConstruct = new QueueService(this, 'QueueService', {
+            ageRestriction: props.parameters.ageRestriction ? props.parameters.ageRestriction : 28,
+            cluster: props.cluster,
+            logGroup: props.logGroup,
+            repository: props.repository,
+            tag: imageTag
+        });
+
+        this.service = serviceConstruct.service;
+        this.metric = serviceConstruct.metric;
+        this.useLatest = (imageTag === DEFAULT_ECR_TAG);
+    }
+}
+
+interface BaseStackProps extends cdk.StackProps {
+    artifactBucket: s3.IBucket;
     vpc: ec2.IVpc;
 }
 
-export class MainStack extends cdk.Stack {
-    constructor(scope: cdk.Construct, id: string, props: MainStackProps) {
+export class BaseStack extends cdk.Stack {
+    public readonly cluster: ecs.Cluster;
+    public readonly logGroup: logs.LogGroup;
+
+    constructor(scope: cdk.Construct, id: string, props: BaseStackProps) {
         super(scope, id, props);
 
         const cluster = new ecs.Cluster(this, 'Cluster', {
@@ -98,35 +130,7 @@ export class MainStack extends cdk.Stack {
             retention: 365
         });
 
-        let listeningServices = new Map<string, ecs.BaseService>();
-        let metrics = new Array<cloudwatch.Metric>();
-
-        for (let [name, params] of props.mappings) {
-            let imageTag = params.version ? params.version : DEFAULT_ECR_TAG;
-
-            let serviceConstruct = new QueueService(this, name, {
-                ageRestriction: params.ageRestriction ? params.ageRestriction : 28,
-                cluster: cluster,
-                logGroup: logGroup,
-                repository: props.repository,
-                tag: imageTag
-            });
-
-            if (imageTag === DEFAULT_ECR_TAG) {
-                listeningServices.set(name, serviceConstruct.service);
-            }
-
-            metrics.push(serviceConstruct.metric);
-        }
-
-        new EcsStack(this, 'DeployPipeline', {
-            imageRepositoryName: props.repository.repositoryName,
-            ecsServices: listeningServices,
-            artifactBucket: props.artifactBucket
-        });
-
-        new DashboardStack(this, 'DashboardStack', {
-            metrics: metrics
-        });
+        this.cluster = cluster;
+        this.logGroup = logGroup;
     }
 }

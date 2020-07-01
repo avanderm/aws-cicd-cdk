@@ -8,6 +8,7 @@ import * as ecr from '@aws-cdk/aws-ecr';
 import * as ecs from '@aws-cdk/aws-ecs';
 import * as iam from '@aws-cdk/aws-iam';
 import * as s3 from '@aws-cdk/aws-s3';
+import * as service from './service';
 
 import { getSubnetIds, getAvailabilityZones } from './utils';
 
@@ -122,14 +123,14 @@ export class DockerStack extends cdk.Stack {
     }
 }
 
-interface EcsStackProps extends cdk.NestedStackProps {
+interface EcsStackProps extends cdk.StackProps {
     artifactBucket: s3.IBucket;
     ecsServices: Map<string, ecs.FargateService>;
     imageRepositoryName: string;
     tag?: string;
 }
 
-export class EcsStack extends cdk.NestedStack {
+export class EcsStack extends cdk.Stack {
     constructor(scope: cdk.Construct, id: string, props: EcsStackProps) {
         super(scope, id, props);
 
@@ -221,6 +222,7 @@ interface CdkStackProps extends cdk.StackProps {
     branch?: string;
     artifactBucket: s3.IBucket;
     vpc: ec2.IVpc;
+    serviceStacks: Array<service.QueueServiceStack>;
     environment?: string;
 }
 
@@ -477,7 +479,6 @@ export class CdkStack extends cdk.Stack {
             capabilities: [
                 cfn.CloudFormationCapabilities.ANONYMOUS_IAM
             ],
-            // deploymentRole: props.pipelineDeploymentRole,
             templatePath: cdkOutput.atPath('DockerPipeline.template.json'),
             templateConfiguration: configOutput.atPath('basicConfiguration.json'),
             stackName: 'DockerPipeline',
@@ -485,16 +486,61 @@ export class CdkStack extends cdk.Stack {
             runOrder: 1
         });
 
-        const mainDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+        const baseDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
             actionName: 'Deploy',
             capabilities: [
                 cfn.CloudFormationCapabilities.ANONYMOUS_IAM
             ],
             templatePath: cdkOutput.atPath('MainStack.template.json'),
-            templateConfiguration: configOutput.atPath('mainConfiguration.json'),
-            stackName: 'MainStack',
+            templateConfiguration: configOutput.atPath('basicConfiguration.json'),
+            stackName: 'BaseStack',
             adminPermissions: false,
             runOrder: 2
+        });
+
+        const serviceStackDeploymentRole = new iam.Role(this, 'ServiceStackDeploymentRole', {
+            assumedBy: new iam.ServicePrincipal('cloudformation.amazonaws.com')
+        });
+
+        let serviceStackDeployments = new Array<codepipeline_actions.CloudFormationCreateUpdateStackAction>();
+
+        for (let stack of props.serviceStacks) {
+            serviceStackDeployments.push(new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+                actionName: `Update${stack}`,
+                capabilities: [
+                    cfn.CloudFormationCapabilities.ANONYMOUS_IAM
+                ],
+                runOrder: stack.useLatest ? 3 : 5,
+                templatePath: cdkOutput.atPath(`${stack.stackName}.template.json`),
+                templateConfiguration: configOutput.atPath('basicConfiguration.json'),
+                stackName: stack.stackName,
+                deploymentRole: serviceStackDeploymentRole,
+                adminPermissions: false
+            }));
+        }
+
+        const ecsDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+            actionName: 'DeployPipeline',
+            capabilities: [
+                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
+            ],
+            templatePath: cdkOutput.atPath('DeployPipeline.template.json'),
+            templateConfiguration: configOutput.atPath('basicConfiguration.json'),
+            stackName: 'DeployPipeline',
+            adminPermissions: false,
+            runOrder: 4
+        });
+
+        const dashboardDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+            actionName: 'DashboardStack',
+            capabilities: [
+                cfn.CloudFormationCapabilities.ANONYMOUS_IAM
+            ],
+            templatePath: cdkOutput.atPath('DashboardStack.template.json'),
+            templateConfiguration: configOutput.atPath('basicConfiguration.json'),
+            stackName: 'DashboardStack',
+            adminPermissions: false,
+            runOrder: 4
         });
 
         new codepipeline.Pipeline(this, 'Pipeline', {
@@ -537,8 +583,10 @@ export class CdkStack extends cdk.Stack {
                     stageName: 'Deploy',
                     actions: [
                         dockerDeployment,
-                        mainDeployment,
-                        // ecsDeployment
+                        baseDeployment,
+                        ...serviceStackDeployments,
+                        ecsDeployment,
+                        dashboardDeployment
                     ]
                 }
             ]
@@ -553,19 +601,17 @@ export class CdkStack extends cdk.Stack {
         dockerDeployment.addToDeploymentRolePolicy(secretsPermissions);
         dockerDeployment.addToDeploymentRolePolicy(tagPermissions);
 
-        mainDeployment.addToDeploymentRolePolicy(ec2Permissions);
-        mainDeployment.addToDeploymentRolePolicy(ecsClusterPermissions);
-        mainDeployment.addToDeploymentRolePolicy(ecsServicePermissions);
-        mainDeployment.addToDeploymentRolePolicy(cloudwatchPermissions);
-        mainDeployment.addToDeploymentRolePolicy(codebuildPermissions);
-        mainDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
-        mainDeployment.addToDeploymentRolePolicy(eventsPermissions);
-        mainDeployment.addToDeploymentRolePolicy(iamPermissions);
-        mainDeployment.addToDeploymentRolePolicy(iamRolePermissions);
-        mainDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
-        mainDeployment.addToDeploymentRolePolicy(logsPermissions);
-        mainDeployment.addToDeploymentRolePolicy(sqsPermissions);
-        mainDeployment.addToDeploymentRolePolicy(tagPermissions);
+        baseDeployment.addToDeploymentRolePolicy(ec2Permissions);
+        baseDeployment.addToDeploymentRolePolicy(ecsClusterPermissions);
+        baseDeployment.addToDeploymentRolePolicy(cloudwatchPermissions);
+        baseDeployment.addToDeploymentRolePolicy(codebuildPermissions);
+        baseDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
+        baseDeployment.addToDeploymentRolePolicy(eventsPermissions);
+        baseDeployment.addToDeploymentRolePolicy(iamPermissions);
+        baseDeployment.addToDeploymentRolePolicy(iamRolePermissions);
+        baseDeployment.addToDeploymentRolePolicy(iamPolicyPermissions);
+        baseDeployment.addToDeploymentRolePolicy(logsPermissions);
+        baseDeployment.addToDeploymentRolePolicy(tagPermissions);
 
         selfDeployment.addToDeploymentRolePolicy(codebuildPermissions);
         selfDeployment.addToDeploymentRolePolicy(codepipelinePermissions);
@@ -573,5 +619,11 @@ export class CdkStack extends cdk.Stack {
         selfDeployment.addToDeploymentRolePolicy(iamRolePermissions);
         selfDeployment.addToDeploymentRolePolicy(secretsPermissions);
         selfDeployment.addToDeploymentRolePolicy(tagPermissions);
+
+        serviceStackDeploymentRole.addToPolicy(ecsServicePermissions);
+        serviceStackDeploymentRole.addToPolicy(iamRolePermissions);
+        serviceStackDeploymentRole.addToPolicy(iamPolicyPermissions);
+        serviceStackDeploymentRole.addToPolicy(sqsPermissions);
+        serviceStackDeploymentRole.addToPolicy(tagPermissions);
     }
 }

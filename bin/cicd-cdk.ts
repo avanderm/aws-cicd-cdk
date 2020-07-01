@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 import * as cdk from '@aws-cdk/core';
+import * as cloudwatch from '@aws-cdk/aws-cloudwatch';
+import * as ecs from '@aws-cdk/aws-ecs';
 import * as external from '../lib/external';
 import * as cicd from '../lib/cicd';
 import * as service from '../lib/service';
+import * as monitoring from '../lib/monitoring';
 import { camelCase } from '../lib/utils';
 
 import fs = require('fs');
@@ -39,7 +42,7 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
     },
     tags: {
         Pillar: 'hs',
-        Domain: 'hp',
+        Dobase: 'hp',
         Team: 'hp',
         Owner: 'antoine',
         Environment: environment,
@@ -51,13 +54,7 @@ const dockerPipeline = new cicd.DockerStack(app, 'DockerPipeline', {
     artifactBucket: externalResources.artifactBucket
 });
 
-let serviceParameters = new Map<string, service.ServiceProps>();
-
-for (let [name, params] of Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8')))) {
-    serviceParameters.set(camelCase(name), <service.ServiceProps> params);
-}
-
-const mainStack = new service.MainStack(app, 'MainStack', {
+const baseStack = new service.BaseStack(app, 'BaseStack', {
     env: {
         account: account,
         region: region
@@ -71,15 +68,44 @@ const mainStack = new service.MainStack(app, 'MainStack', {
         Project: 'CICD'
     },
     artifactBucket: externalResources.artifactBucket,
-    mappings: serviceParameters,
-    repository: dockerPipeline.imageRepository,
     vpc: externalResources.vpc
 });
 
-const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
+let services = new Map<string, ecs.BaseService>();
+let serviceMetrics = new Array<cloudwatch.Metric>();
+let serviceStacks = new Array<service.QueueServiceStack>();
+
+for (let [name, params] of Object.entries(yaml.parse(fs.readFileSync(`./config/${environment}.yml`, 'utf-8')))) {
+    let serviceParameters = <service.ServiceProps> params;
+
+    let serviceStack = new service.QueueServiceStack(app, `QueueService-${camelCase(name)}`, {
+        env: {
+            account: account,
+            region: region
+        },
+        tags: {
+            Pillar: 'hs',
+            Domain: 'hp',
+            Team: 'hp',
+            Owner: 'antoine',
+            Environment: environment,
+            Project: 'CICD'
+        },
+        cluster: baseStack.cluster,
+        logGroup: baseStack.logGroup,
+        parameters: serviceParameters,
+        repository: dockerPipeline.imageRepository
+    });
+
+    if (serviceStack.useLatest) services.set(camelCase(name), serviceStack.service);
+    serviceMetrics.push(serviceStack.metric);
+    serviceStacks.push(serviceStack);
+}
+
+const ecsPipeline = new cicd.EcsStack(app, 'DeployPipeline', {
     env: {
-        account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
-        region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION
+        account: account,
+        region: region
     },
     tags: {
         Pillar: 'hs',
@@ -89,15 +115,39 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
         Environment: environment,
         Project: 'CICD'
     },
+    imageRepositoryName: dockerPipeline.imageRepository.repositoryName,
+    ecsServices: services,
+    artifactBucket: externalResources.artifactBucket
+});
+
+// frozen service stacks will remove their outputs, so first remove any imports
+for (let stack of serviceStacks) {
+    if (!stack.useLatest) stack.addDependency(ecsPipeline);
+}
+
+const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
+    env: {
+        account: process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT,
+        region: process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION
+    },
+    tags: {
+        Pillar: 'hs',
+        Dobase: 'hp',
+        Team: 'hp',
+        Owner: 'antoine',
+        Environment: environment,
+        Project: 'CICD'
+    },
     dockerRepositoryName: dockerRepository,
     cdkRepositoryName: cdkRepository,
     githubTokenParameter: githubTokenParameter,
     owner: githubOwner,
-    branch: 'master',
+    branch: 'separate-stacks',
     artifactBucket: externalResources.artifactBucket,
     vpc: externalResources.vpc,
+    serviceStacks: serviceStacks,
     environment: environment
 });
 
 dockerPipeline.addDependency(cdkPipeline);
-mainStack.addDependency(cdkPipeline);
+baseStack.addDependency(cdkPipeline);
