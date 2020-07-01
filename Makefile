@@ -27,8 +27,17 @@ delete = npm run cdk destroy -- -a bin/cicd-cdk.js $(1)
 deploy:
 	$(call deploy,$(STACK))
 
+deploy-all:
+	$(call deploy,"*")
+
 synth:
 	$(call synth,$(STACK))
 
+synth-all:
+	$(call synth,"*")
+
 delete:
 	$(call delete,$(STACK))
+
+delete-all:
+	$(call delete,"*")
