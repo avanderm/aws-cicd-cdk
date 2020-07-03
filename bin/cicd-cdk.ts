@@ -84,7 +84,7 @@ const cdkPipeline = new cicd.CdkStack(app, 'CdkPipeline', {
     cdkRepositoryName: cdkRepository,
     githubTokenParameter: githubTokenParameter,
     owner: githubOwner,
-    branch: 'master',
+    branch: 'nested-stacks',
     artifactBucket: externalResources.artifactBucket,
     vpc: externalResources.vpc,
     environment: environment
