@@ -19,15 +19,9 @@ export class ExternalResources extends cdk.Stack {
         const artifactBucket = s3.Bucket.fromBucketName(this, 'ArtifactBucket', props.artifactBucket);
 
         const vpc = ec2.Vpc.fromVpcAttributes(this, 'VPC', {
-            vpcId: 'vpc-c8bfc0ad',
-            availabilityZones: [
-                'eu-west-1a',
-                'eu-west-1b'
-            ],
-            privateSubnetIds: [
-                'subnet-95406fcd',
-                'subnet-4138db26'
-            ]
+            vpcId: props.vpc,
+            availabilityZones: props.availabilityZones,
+            privateSubnetIds: props.subnets
         });
 
         this.artifactBucket = artifactBucket;
