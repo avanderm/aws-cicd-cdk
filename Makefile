@@ -22,7 +22,11 @@ synth = npm run cdk synth -- \
 	-c subnets=$(SUBNET_IDS) \
 	-c availabilityZones=$(AVAILABILITY_ZONES)
 
-delete = npm run cdk destroy -- -a bin/cicd-cdk.js $(1)
+delete = npm run cdk destroy -- \
+	-a bin/cicd-cdk.js $(1) \
+	-c vpc=$(VPC_ID) \
+	-c subnets=$(SUBNET_IDS) \
+	-c availabilityZones=$(AVAILABILITY_ZONES)
 
 deploy:
 	$(call deploy,$(STACK))
