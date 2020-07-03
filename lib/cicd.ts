@@ -486,7 +486,7 @@ export class CdkStack extends cdk.Stack {
         });
 
         const mainDeployment = new codepipeline_actions.CloudFormationCreateUpdateStackAction({
-            actionName: 'Deploy',
+            actionName: 'MainStack',
             capabilities: [
                 cfn.CloudFormationCapabilities.ANONYMOUS_IAM
             ],
